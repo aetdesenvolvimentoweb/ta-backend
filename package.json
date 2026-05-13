@@ -5,7 +5,13 @@
   "private": true,
   "scripts": {
     "start": "bun run src/index.ts",
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun run --watch src/index.ts",
+    "test": "bun test",
+    "test:unit": "bun test --filter '\\.test\\.ts$'",
+    "test:integration": "bun test --filter '\\.itest\\.ts$'",
+    "test:e2e": "bun test --filter '\\.e2e\\.ts$'",
+    "test:coverage": "bun test --coverage",
+    "test:staged": "bun test $(git diff --staged --name-only | grep '\\.test\\.ts$')"
   },
   "devDependencies": {
     "@types/bun": "latest"
