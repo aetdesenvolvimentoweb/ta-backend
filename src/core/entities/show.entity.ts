@@ -1,3 +1,5 @@
+import { ShowDuration } from "../value-objects/show-duration.vo";
+
 /**
  * Representa um show/apresentação ao vivo de um artista.
  * @class Show
@@ -7,14 +9,14 @@ export class Show {
    * @param {string} id - Identificador único do show.
    * @param {string} artistId - ID do artista realizando o show.
    * @param {Date} startTime - Horário de início.
-   * @param {number} durationHours - Duração máxima permitida em horas (RN01).
+   * @param {ShowDuration} duration - Duração máxima permitida (Value Object).
    * @param {'active' | 'finished' | 'expired'} status - Estado atual do show.
    */
   constructor(
     public readonly id: string,
     public readonly artistId: string,
     public readonly startTime: Date,
-    public durationHours: number = 4,
+    public duration: ShowDuration = new ShowDuration(4),
     public status: 'active' | 'finished' | 'expired' = 'active'
   ) {}
 
@@ -26,7 +28,7 @@ export class Show {
     if (this.status !== 'active') return true;
     
     const now = new Date();
-    const expirationTime = new Date(this.startTime.getTime() + this.durationHours * 60 * 60 * 1000);
+    const expirationTime = new Date(this.startTime.getTime() + this.duration.toMilliseconds());
     
     return now > expirationTime;
   }
