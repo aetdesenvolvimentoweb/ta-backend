@@ -1,0 +1,25 @@
+import { IMusicRequestRepository } from "../../core/ports/music-request.repository";
+
+export interface MarkSongAsPlayedInput {
+  showId: string;
+  songId: string;
+}
+
+/**
+ * Caso de Uso: Marcar música como tocada.
+ * Aplica a regra RN03: Todos os pedidos pendentes daquela música no show são atualizados.
+ */
+export class MarkSongAsPlayedUseCase {
+  constructor(
+    private requestRepository: IMusicRequestRepository
+  ) {}
+
+  async execute(input: MarkSongAsPlayedInput): Promise<void> {
+    // Aplica a regra RN03: Atualiza todos os pedidos da mesma música para 'played'
+    await this.requestRepository.updateStatusBySong(
+      input.showId, 
+      input.songId, 
+      'played'
+    );
+  }
+}
