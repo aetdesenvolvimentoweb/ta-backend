@@ -1,3 +1,6 @@
+import { UnauthorizedError } from "../../core/errors/app-error";
+import { ILogger } from "../../core/ports/logger.port";
+
 /**
  * Interface para gerenciar a lista de e-mails autorizados (Whitelist) de administradores.
  */
@@ -17,13 +20,17 @@ export interface IAdminWhitelistRepository {
  * Caso de Uso: Validar se um usuário pode acessar o painel administrativo.
  */
 export class ValidateAdminWhitelistUseCase {
-  constructor(private whitelistRepository: IAdminWhitelistRepository) {}
+  constructor(
+    private whitelistRepository: IAdminWhitelistRepository,
+    private logger: ILogger
+  ) {}
 
   async execute(email: string): Promise<boolean> {
     const isAllowed = await this.whitelistRepository.isEmailAllowed(email);
     
     if (!isAllowed) {
-      throw new Error("Acesso negado. Este e-mail não está na lista de administradores autorizados.");
+      this.logger.warn(`Tentativa de acesso administrativo negada: ${email}`);
+      throw new UnauthorizedError("Acesso negado. Este e-mail não está na lista de administradores autorizados.");
     }
 
     return true;

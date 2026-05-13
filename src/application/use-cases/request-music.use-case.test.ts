@@ -36,9 +36,16 @@ class MockSongRepo {
   async delete() {}
 }
 
+const mockLogger = { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} };
+
 describe("RequestMusic Use Case", () => {
   test("deve permitir o primeiro pedido gratuito (RN09)", async () => {
-    const useCase = new RequestMusicUseCase(new MockRequestRepo(), new MockShowRepo(), new MockSongRepo());
+    const useCase = new RequestMusicUseCase(
+      new MockRequestRepo() as any, 
+      new MockShowRepo() as any, 
+      new MockSongRepo() as any,
+      mockLogger as any
+    );
 
     const req = await useCase.execute({
       showId: "show-1",

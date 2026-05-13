@@ -1,5 +1,6 @@
 import { MusicRequest } from "../../core/entities/music-request.entity";
 import { IMusicRequestRepository } from "../../core/ports/music-request.repository";
+import { ILogger } from "../../core/ports/logger.port";
 
 /**
  * Caso de Uso: Listar pedidos de um show.
@@ -7,7 +8,8 @@ import { IMusicRequestRepository } from "../../core/ports/music-request.reposito
  */
 export class GetShowRequestsUseCase {
   constructor(
-    private requestRepository: IMusicRequestRepository
+    private requestRepository: IMusicRequestRepository,
+    private logger: ILogger
   ) {}
 
   async execute(showId: string): Promise<MusicRequest[]> {

@@ -29,9 +29,11 @@ class MockShowRepo {
   async markExpiredShows() {}
 }
 
+const mockLogger = { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} };
+
 describe("GetArtistMetrics Use Case (RN02)", () => {
   test("deve calcular métricas corretamente com 15% de comissão", async () => {
-    const useCase = new GetArtistMetricsUseCase(new MockRequestRepo() as any, new MockShowRepo() as any);
+    const useCase = new GetArtistMetricsUseCase(new MockRequestRepo() as any, new MockShowRepo() as any, mockLogger as any);
 
     const metrics = await useCase.execute("artist-1");
 

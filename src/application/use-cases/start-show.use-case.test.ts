@@ -30,11 +30,13 @@ class InMemoryArtistRepository {
   async delete(id: string): Promise<void> {}
 }
 
+const mockLogger = { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} };
+
 describe("StartShow Use Case", () => {
   test("deve iniciar um show com sucesso", async () => {
     const showRepo = new InMemoryShowRepository();
     const artistRepo = new InMemoryArtistRepository();
-    const useCase = new StartShowUseCase(showRepo, artistRepo);
+    const useCase = new StartShowUseCase(showRepo as any, artistRepo as any, mockLogger as any);
 
     const show = await useCase.execute({ artistId: "artist-1", durationHours: 4 });
 
@@ -45,7 +47,7 @@ describe("StartShow Use Case", () => {
   test("deve impedir novo show se já houver um ativo", async () => {
     const showRepo = new InMemoryShowRepository();
     const artistRepo = new InMemoryArtistRepository();
-    const useCase = new StartShowUseCase(showRepo, artistRepo);
+    const useCase = new StartShowUseCase(showRepo as any, artistRepo as any, mockLogger as any);
 
     await useCase.execute({ artistId: "artist-1", durationHours: 4 });
     
@@ -56,7 +58,7 @@ describe("StartShow Use Case", () => {
   test("deve permitir novo show se o anterior estiver expirado", async () => {
     const showRepo = new InMemoryShowRepository();
     const artistRepo = new InMemoryArtistRepository();
-    const useCase = new StartShowUseCase(showRepo, artistRepo);
+    const useCase = new StartShowUseCase(showRepo as any, artistRepo as any, mockLogger as any);
 
     // Criar um show que começou há 10 horas com duração de 4h (já expirado)
     const expiredShow = new Show(

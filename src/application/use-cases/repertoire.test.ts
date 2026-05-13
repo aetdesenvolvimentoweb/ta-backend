@@ -24,11 +24,13 @@ class MockStyleRepo {
   async mergeStyles() {}
 }
 
+const mockLogger = { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} };
+
 describe("Manage Repertoire Use Cases", () => {
   test("deve adicionar uma música ao repertório", async () => {
     const songRepo = new MockSongRepo();
     const styleRepo = new MockStyleRepo();
-    const useCase = new AddSongUseCase(songRepo as any, styleRepo as any);
+    const useCase = new AddSongUseCase(songRepo as any, styleRepo as any, mockLogger as any);
 
     const song = await useCase.execute({
       artistId: "artist-1",
@@ -43,8 +45,8 @@ describe("Manage Repertoire Use Cases", () => {
 
   test("deve alternar disponibilidade da música", async () => {
     const songRepo = new MockSongRepo();
-    const useCase = new AddSongUseCase(songRepo as any, new MockStyleRepo() as any);
-    const toggle = new ToggleSongAvailabilityUseCase(songRepo as any);
+    const useCase = new AddSongUseCase(songRepo as any, new MockStyleRepo() as any, mockLogger as any);
+    const toggle = new ToggleSongAvailabilityUseCase(songRepo as any, mockLogger as any);
 
     const song = await useCase.execute({
       artistId: "artist-1",

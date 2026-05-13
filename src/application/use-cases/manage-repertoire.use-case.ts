@@ -1,6 +1,8 @@
 import { Song } from "../../core/entities/song.entity";
+import { NotFoundError } from "../../core/errors/app-error";
 import { ISongRepository } from "../../core/ports/song.repository";
 import { IStyleRepository } from "../../core/ports/style.repository";
+import { ILogger } from "../../core/ports/logger.port";
 
 export interface AddSongInput {
   artistId: string;
@@ -15,7 +17,8 @@ export interface AddSongInput {
 export class AddSongUseCase {
   constructor(
     private songRepository: ISongRepository,
-    private styleRepository: IStyleRepository
+    private styleRepository: IStyleRepository,
+    private logger: ILogger
   ) {}
 
   async execute(input: AddSongInput): Promise<Song> {
@@ -23,6 +26,7 @@ export class AddSongUseCase {
     let style = await this.styleRepository.findByName(input.styleName);
     
     if (!style) {
+      this.logger.info(`Novo estilo sugerido por artista: ${input.styleName}`);
       // Se não existe, cria um novo (Admin receberá notificação futuramente - RN10)
       style = { id: crypto.randomUUID(), name: input.styleName };
       await this.styleRepository.save(style);
@@ -48,15 +52,19 @@ export class AddSongUseCase {
  * Caso de Uso: Alternar disponibilidade da música (RN05/RN08).
  */
 export class ToggleSongAvailabilityUseCase {
-  constructor(private songRepository: ISongRepository) {}
+  constructor(
+    private songRepository: ISongRepository,
+    private logger: ILogger
+  ) {}
 
   async execute(songId: string, isAvailable: boolean): Promise<void> {
     const song = await this.songRepository.findById(songId);
     if (!song) {
-      throw new Error("Música não encontrada.");
+      throw new NotFoundError("Música não encontrada.");
     }
 
     song.setAvailability(isAvailable);
     await this.songRepository.save(song);
+    this.logger.info(`Disponibilidade da música ${song.title} alterada para: ${isAvailable}`);
   }
 }

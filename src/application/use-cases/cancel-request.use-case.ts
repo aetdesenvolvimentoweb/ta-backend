@@ -1,21 +1,26 @@
 import { IMusicRequestRepository } from "../../core/ports/music-request.repository";
+import { ILogger } from "../../core/ports/logger.port";
+import { NotFoundError, BusinessRuleError } from "../../core/errors/app-error";
 
 /**
  * Caso de Uso: Cancelar um pedido de música (RN05).
  * Permite que o artista rejeite um pedido ou o sistema o cancele.
  */
 export class CancelMusicRequestUseCase {
-  constructor(private requestRepository: IMusicRequestRepository) {}
+  constructor(
+    private requestRepository: IMusicRequestRepository,
+    private logger: ILogger
+  ) {}
 
   async execute(requestId: string): Promise<void> {
     const request = await this.requestRepository.findById(requestId);
 
     if (!request) {
-      throw new Error("Pedido não encontrado.");
+      throw new NotFoundError("Pedido não encontrado.");
     }
 
     if (request.status === 'played') {
-      throw new Error("Não é possível cancelar um pedido que já foi tocado.");
+      throw new BusinessRuleError("Não é possível cancelar um pedido que já foi tocado.");
     }
 
     // Muda o status para cancelado

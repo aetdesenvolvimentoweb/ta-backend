@@ -21,11 +21,13 @@ class MockHasher implements IPasswordHasher {
   async compare(p: string, h: string) { return h === "hash_correta"; }
 }
 
+const mockLogger = { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} };
+
 describe("AuthenticateArtist Use Case", () => {
   test("deve autenticar com sucesso se as credenciais estiverem corretas", async () => {
     const repo = new MockArtistRepo();
     const hasher = new MockHasher();
-    const useCase = new AuthenticateArtistUseCase(repo as any, hasher);
+    const useCase = new AuthenticateArtistUseCase(repo as any, hasher, mockLogger as any);
 
     // Mockando o comportamento do compare para este teste
     hasher.compare = async () => true;
@@ -41,7 +43,7 @@ describe("AuthenticateArtist Use Case", () => {
   test("deve falhar se o e-mail não existir", async () => {
     const repo = new MockArtistRepo();
     const hasher = new MockHasher();
-    const useCase = new AuthenticateArtistUseCase(repo as any, hasher);
+    const useCase = new AuthenticateArtistUseCase(repo as any, hasher, mockLogger as any);
 
     expect(useCase.execute({
       email: "inexistente@show.com",
@@ -52,7 +54,7 @@ describe("AuthenticateArtist Use Case", () => {
   test("deve falhar se a senha estiver incorreta", async () => {
     const repo = new MockArtistRepo();
     const hasher = new MockHasher();
-    const useCase = new AuthenticateArtistUseCase(repo as any, hasher);
+    const useCase = new AuthenticateArtistUseCase(repo as any, hasher, mockLogger as any);
 
     // Mockando senha incorreta
     hasher.compare = async () => false;

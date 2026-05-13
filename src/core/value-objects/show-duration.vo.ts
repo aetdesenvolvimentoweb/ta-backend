@@ -1,3 +1,5 @@
+import { BusinessRuleError } from "../errors/app-error";
+
 /**
  * Value Object que valida a duração permitida para um show (RN01).
  * @class ShowDuration
@@ -5,11 +7,11 @@
 export class ShowDuration {
   /**
    * @param {number} hours - Duração em horas.
-   * @throws Error se estiver fora do range [4, 24].
+   * @throws BusinessRuleError se estiver fora do range [4, 24].
    */
   constructor(public readonly hours: number) {
     if (hours < 4 || hours > 24) {
-      throw new Error("A duração do show deve ser entre 4 e 24 horas (RN01).");
+      throw new BusinessRuleError("A duração do show deve ser entre 4 e 24 horas (RN01).");
     }
   }
 

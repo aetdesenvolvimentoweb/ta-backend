@@ -1,5 +1,6 @@
 import { IMusicRequestRepository } from "../../core/ports/music-request.repository";
 import { IShowRepository } from "../../core/ports/show.repository";
+import { ILogger } from "../../core/ports/logger.port";
 import { Money } from "../../core/value-objects/money.vo";
 
 export interface ArtistMetrics {
@@ -17,7 +18,8 @@ export class GetArtistMetricsUseCase {
 
   constructor(
     private requestRepository: IMusicRequestRepository,
-    private showRepository: IShowRepository
+    private showRepository: IShowRepository,
+    private logger: ILogger
   ) {}
 
   async execute(artistId: string): Promise<ArtistMetrics> {

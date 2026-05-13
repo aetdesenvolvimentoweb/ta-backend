@@ -1,3 +1,5 @@
+import { BusinessRuleError } from "../errors/app-error";
+
 /**
  * Value Object para lidar com valores monetários de forma segura (em centavos).
  * Evita erros de precisão de ponto flutuante.
@@ -6,15 +8,15 @@
 export class Money {
   /**
    * @param {number} amountInCents - O valor total em centavos (ex: R$ 10,00 = 1000).
-   * @throws Error se o valor for negativo.
+   * @throws BusinessRuleError se o valor for negativo.
    */
   constructor(public readonly amountInCents: number) {
     if (amountInCents < 0) {
-      throw new Error("O valor monetário não pode ser negativo.");
+      throw new BusinessRuleError("O valor monetário não pode ser negativo.");
     }
     
     if (!Number.isInteger(amountInCents)) {
-      throw new Error("O valor em centavos deve ser um número inteiro.");
+      throw new BusinessRuleError("O valor em centavos deve ser um número inteiro.");
     }
   }
 

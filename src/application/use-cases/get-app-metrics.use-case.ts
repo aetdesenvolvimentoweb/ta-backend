@@ -1,6 +1,7 @@
 import { IMusicRequestRepository } from "../../core/ports/music-request.repository";
 import { IArtistRepository } from "../../core/ports/artist.repository";
 import { ISongRepository } from "../../core/ports/song.repository";
+import { ILogger } from "../../core/ports/logger.port";
 import { Money } from "../../core/value-objects/money.vo";
 
 export interface AppMetrics {
@@ -19,7 +20,8 @@ export class GetAppMetricsUseCase {
   constructor(
     private requestRepository: IMusicRequestRepository,
     private artistRepository: IArtistRepository,
-    private songRepository: ISongRepository
+    private songRepository: ISongRepository,
+    private logger: ILogger
   ) {}
 
   /**

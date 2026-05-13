@@ -25,6 +25,8 @@ class MockRequestRepo {
   async updateStatusBySong() {}
 }
 
+const mockLogger = { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} };
+
 describe("FinishShow Use Case", () => {
   test("deve encerrar o show e cancelar pedidos pendentes", async () => {
     const showRepo = new MockShowRepo();
@@ -36,7 +38,7 @@ describe("FinishShow Use Case", () => {
     const req = new MusicRequest("req-1", "show-1", "song-1", "A", null, new Money(0));
     await reqRepo.save(req);
 
-    const useCase = new FinishShowUseCase(showRepo as any, reqRepo as any);
+    const useCase = new FinishShowUseCase(showRepo as any, reqRepo as any, mockLogger as any);
     await useCase.execute("show-1");
 
     expect(show.status).toBe('finished');

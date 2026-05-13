@@ -1,4 +1,5 @@
 import { IMusicRequestRepository } from "../../core/ports/music-request.repository";
+import { ILogger } from "../../core/ports/logger.port";
 
 export interface MarkSongAsPlayedInput {
   showId: string;
@@ -11,7 +12,8 @@ export interface MarkSongAsPlayedInput {
  */
 export class MarkSongAsPlayedUseCase {
   constructor(
-    private requestRepository: IMusicRequestRepository
+    private requestRepository: IMusicRequestRepository,
+    private logger: ILogger
   ) {}
 
   async execute(input: MarkSongAsPlayedInput): Promise<void> {
@@ -21,5 +23,6 @@ export class MarkSongAsPlayedUseCase {
       input.songId, 
       'played'
     );
+    this.logger.info(`Música ${input.songId} marcada como tocada no show ${input.showId}`);
   }
 }

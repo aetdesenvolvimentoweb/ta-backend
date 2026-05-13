@@ -1,15 +1,20 @@
+import { BusinessRuleError, NotFoundError } from "../../core/errors/app-error";
 import { IStyleRepository, Style } from "../../core/ports/style.repository";
+import { ILogger } from "../../core/ports/logger.port";
 
 /**
  * Caso de Uso: Criar um estilo musical oficial (Admin).
  */
 export class CreateStyleUseCase {
-  constructor(private styleRepository: IStyleRepository) {}
+  constructor(
+    private styleRepository: IStyleRepository,
+    private logger: ILogger
+  ) {}
 
   async execute(name: string): Promise<Style> {
     const existing = await this.styleRepository.findByName(name);
     if (existing) {
-      throw new Error("Este estilo já existe.");
+      throw new BusinessRuleError("Este estilo já existe.");
     }
 
     const style: Style = {
@@ -18,6 +23,7 @@ export class CreateStyleUseCase {
     };
 
     await this.styleRepository.save(style);
+    this.logger.info(`Novo estilo musical criado: ${style.name}`);
     return style;
   }
 }
@@ -27,7 +33,10 @@ export class CreateStyleUseCase {
  * Exemplo: Unificar "Rock Roll" em "Rock".
  */
 export class MergeStylesUseCase {
-  constructor(private styleRepository: IStyleRepository) {}
+  constructor(
+    private styleRepository: IStyleRepository,
+    private logger: ILogger
+  ) {}
 
   async execute(sourceStyleId: string, targetStyleId: string): Promise<void> {
     // 1. Validar existência dos dois
@@ -35,7 +44,7 @@ export class MergeStylesUseCase {
     const target = await this.styleRepository.findById(targetStyleId);
 
     if (!source || !target) {
-      throw new Error("Um ou ambos os estilos não foram encontrados.");
+      throw new NotFoundError("Um ou ambos os estilos não foram encontrados.");
     }
 
     // 2. Chamar o repositório para atualizar as referências (RN10)

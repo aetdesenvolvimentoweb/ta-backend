@@ -1,7 +1,9 @@
 import { MusicRequest } from "../../core/entities/music-request.entity";
+import { BusinessRuleError, NotFoundError } from "../../core/errors/app-error";
 import { IMusicRequestRepository } from "../../core/ports/music-request.repository";
 import { IShowRepository } from "../../core/ports/show.repository";
 import { ISongRepository } from "../../core/ports/song.repository";
+import { ILogger } from "../../core/ports/logger.port";
 import { Money } from "../../core/value-objects/money.vo";
 
 export interface RequestMusicInput {
@@ -21,20 +23,21 @@ export class RequestMusicUseCase {
   constructor(
     private requestRepository: IMusicRequestRepository,
     private showRepository: IShowRepository,
-    private songRepository: ISongRepository
+    private songRepository: ISongRepository,
+    private logger: ILogger
   ) {}
 
   async execute(input: RequestMusicInput): Promise<MusicRequest> {
     // 1. Validar Show
     const show = await this.showRepository.findById(input.showId);
     if (!show || show.status !== 'active' || show.isExpired()) {
-      throw new Error("Este show não está aceitando pedidos no momento.");
+      throw new BusinessRuleError("Este show não está aceitando pedidos no momento.");
     }
 
     // 2. Validar Música
     const song = await this.songRepository.findById(input.songId);
     if (!song || !song.isAvailable) {
-      throw new Error("Música indisponível no momento.");
+      throw new NotFoundError("Música indisponível no momento.");
     }
 
     // 3. RN09 - Validar Pedido Gratuito

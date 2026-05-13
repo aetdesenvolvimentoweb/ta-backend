@@ -1,6 +1,8 @@
 import { Show } from "../../core/entities/show.entity";
+import { BusinessRuleError, NotFoundError } from "../../core/errors/app-error";
 import { IShowRepository } from "../../core/ports/show.repository";
 import { IArtistRepository } from "../../core/ports/artist.repository";
+import { ILogger } from "../../core/ports/logger.port";
 import { ShowDuration } from "../../core/value-objects/show-duration.vo";
 
 export interface StartShowInput {
@@ -15,14 +17,15 @@ export interface StartShowInput {
 export class StartShowUseCase {
   constructor(
     private showRepository: IShowRepository,
-    private artistRepository: IArtistRepository
+    private artistRepository: IArtistRepository,
+    private logger: ILogger
   ) {}
 
   async execute(input: StartShowInput): Promise<Show> {
     // 1. Verificar se o artista existe
     const artist = await this.artistRepository.findById(input.artistId);
     if (!artist) {
-      throw new Error("Artista não encontrado.");
+      throw new NotFoundError("Artista não encontrado.");
     }
 
     // 2. Verificar se já existe um show ativo (RN01)
@@ -32,8 +35,9 @@ export class StartShowUseCase {
       if (activeShow.isExpired()) {
         activeShow.status = 'expired';
         await this.showRepository.save(activeShow);
+        this.logger.info(`Show ${activeShow.id} marcado como expirado automaticamente.`);
       } else {
-        throw new Error("O artista já possui um show ativo no momento.");
+        throw new BusinessRuleError("O artista já possui um show ativo no momento.");
       }
     }
 

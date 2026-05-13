@@ -1,6 +1,8 @@
 import { Artist } from "../../core/entities/artist.entity";
+import { UnauthorizedError } from "../../core/errors/app-error";
 import { IArtistRepository } from "../../core/ports/artist.repository";
 import { IPasswordHasher } from "../../core/ports/password-hasher.port";
+import { ILogger } from "../../core/ports/logger.port";
 import { Email } from "../../core/value-objects/email.vo";
 
 export interface AuthenticateArtistInput {
@@ -15,7 +17,8 @@ export interface AuthenticateArtistInput {
 export class AuthenticateArtistUseCase {
   constructor(
     private artistRepository: IArtistRepository,
-    private passwordHasher: IPasswordHasher
+    private passwordHasher: IPasswordHasher,
+    private logger: ILogger
   ) {}
 
   async execute(input: AuthenticateArtistInput): Promise<Artist> {
@@ -26,7 +29,8 @@ export class AuthenticateArtistUseCase {
     
     // RN: Usamos uma mensagem genérica por segurança (não revelar se o email existe ou não)
     if (!artist) {
-      throw new Error("E-mail ou senha inválidos.");
+      this.logger.warn(`Tentativa de login falha (e-mail inexistente): ${input.email}`);
+      throw new UnauthorizedError("E-mail ou senha inválidos.");
     }
 
     // 2. No mundo real, as entidades teriam um campo 'passwordHash'. 

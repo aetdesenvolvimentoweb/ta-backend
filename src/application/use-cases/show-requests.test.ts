@@ -19,6 +19,8 @@ class MockRequestRepo {
   async updateStatusBySong() {}
 }
 
+const mockLogger = { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} };
+
 describe("GetShowRequests Use Case (RN02)", () => {
   test("deve ordenar pedidos por gorjeta (maior primeiro) e depois por chegada", async () => {
     const now = Date.now();
@@ -29,7 +31,7 @@ describe("GetShowRequests Use Case (RN02)", () => {
 
     // Ordem de inserção bagunçada
     const repo = new MockRequestRepo([req1, req2, req3]);
-    const useCase = new GetShowRequestsUseCase(repo);
+    const useCase = new GetShowRequestsUseCase(repo as any, mockLogger as any);
 
     const sorted = await useCase.execute("show-1");
 

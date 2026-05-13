@@ -1,5 +1,7 @@
 import { IShowRepository } from "../../core/ports/show.repository";
 import { IMusicRequestRepository } from "../../core/ports/music-request.repository";
+import { ILogger } from "../../core/ports/logger.port";
+import { NotFoundError, BusinessRuleError } from "../../core/errors/app-error";
 
 /**
  * Caso de Uso: Encerrar um show manualmente.
@@ -8,18 +10,19 @@ import { IMusicRequestRepository } from "../../core/ports/music-request.reposito
 export class FinishShowUseCase {
   constructor(
     private showRepository: IShowRepository,
-    private requestRepository: IMusicRequestRepository
+    private requestRepository: IMusicRequestRepository,
+    private logger: ILogger
   ) {}
 
   async execute(showId: string): Promise<void> {
     const show = await this.showRepository.findById(showId);
     
     if (!show) {
-      throw new Error("Show não encontrado.");
+      throw new NotFoundError("Show não encontrado.");
     }
 
     if (show.status !== 'active') {
-      throw new Error("Este show já não está mais ativo.");
+      throw new BusinessRuleError("Este show já não está mais ativo.");
     }
 
     // 1. Marcar show como finalizado

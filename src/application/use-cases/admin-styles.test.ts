@@ -12,18 +12,20 @@ class MockStyleRepo implements IStyleRepository {
   async mergeStyles(s: string, t: string) { /* Simula o update */ }
 }
 
+const mockLogger = { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} };
+
 describe("Admin Style Use Cases (RN10)", () => {
   test("deve criar um novo estilo", async () => {
     const repo = new MockStyleRepo();
-    const useCase = new CreateStyleUseCase(repo);
+    const useCase = new CreateStyleUseCase(repo as any, mockLogger as any);
     const style = await useCase.execute("Rock");
     expect(style.name).toBe("Rock");
   });
 
   test("deve unificar estilos redundantes", async () => {
     const repo = new MockStyleRepo();
-    const create = new CreateStyleUseCase(repo);
-    const merge = new MergeStylesUseCase(repo);
+    const create = new CreateStyleUseCase(repo as any, mockLogger as any);
+    const merge = new MergeStylesUseCase(repo as any, mockLogger as any);
 
     const s1 = await create.execute("Rock");
     const s2 = await create.execute("Rock Roll");
