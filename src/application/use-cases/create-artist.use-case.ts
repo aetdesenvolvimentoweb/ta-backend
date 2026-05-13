@@ -1,6 +1,7 @@
 import { Artist } from "../../core/entities/artist.entity";
+import { BusinessRuleError } from "../../core/errors/app-error";
 import { IArtistRepository } from "../../core/ports/artist.repository";
-import { IPasswordHasher } from "../../core/ports/password-hasher.port";
+import { ILogger } from "../../core/ports/logger.port";
 import { Email } from "../../core/value-objects/email.vo";
 
 /**
@@ -18,12 +19,13 @@ export interface CreateArtistInput {
  */
 export class CreateArtistUseCase {
   constructor(
-    private artistRepository: IArtistRepository
+    private artistRepository: IArtistRepository,
+    private logger: ILogger
   ) {}
 
   /**
    * Executa a lógica de criação de um artista.
-   * @throws Error se o e-mail já estiver cadastrado.
+   * @throws BusinessRuleError se o e-mail já estiver cadastrado.
    */
   async execute(input: CreateArtistInput): Promise<Artist> {
     const emailVO = new Email(input.email);
@@ -31,7 +33,7 @@ export class CreateArtistUseCase {
     // 1. Verificar se o e-mail já existe (Regra de Negócio)
     const existingArtist = await this.artistRepository.findByEmail(emailVO.getValue());
     if (existingArtist) {
-      throw new Error("Este e-mail já está em uso por outro artista.");
+      throw new BusinessRuleError("Este e-mail já está em uso por outro artista.");
     }
 
     // 2. Criar a entidade (O ID deve ser gerado, aqui usaremos o crypto do Bun/Node)
@@ -46,6 +48,8 @@ export class CreateArtistUseCase {
 
     // 3. Persistir
     await this.artistRepository.save(artist);
+
+    this.logger.info(`Novo artista cadastrado: ${artist.name} (${artist.id})`);
 
     return artist;
   }

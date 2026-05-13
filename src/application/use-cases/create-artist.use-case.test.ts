@@ -1,6 +1,17 @@
 import { expect, test, describe, spyOn } from "bun:test";
 import { CreateArtistUseCase } from "./create-artist.use-case";
 import { Artist } from "../../core/entities/artist.entity";
+import { BusinessRuleError } from "../../core/errors/app-error";
+
+/**
+ * Mock simples para o Logger.
+ */
+const mockLogger = {
+  info: () => {},
+  error: () => {},
+  warn: () => {},
+  debug: () => {}
+};
 
 /**
  * Mock simples em memória para o repositório de artistas.
@@ -28,7 +39,7 @@ class InMemoryArtistRepository {
 describe("CreateArtist Use Case", () => {
   test("deve criar um artista com sucesso", async () => {
     const repo = new InMemoryArtistRepository();
-    const useCase = new CreateArtistUseCase(repo);
+    const useCase = new CreateArtistUseCase(repo, mockLogger as any);
 
     const input = {
       name: "João do Violão",
@@ -49,7 +60,7 @@ describe("CreateArtist Use Case", () => {
 
   test("deve lançar erro se o e-mail já existir", async () => {
     const repo = new InMemoryArtistRepository();
-    const useCase = new CreateArtistUseCase(repo);
+    const useCase = new CreateArtistUseCase(repo, mockLogger as any);
 
     const input = {
       name: "João",
@@ -59,6 +70,12 @@ describe("CreateArtist Use Case", () => {
     await useCase.execute(input); // Primeiro cadastro
     
     // Segunda tentativa com mesmo e-mail
-    expect(useCase.execute(input)).rejects.toThrow("já está em uso");
+    try {
+      await useCase.execute(input);
+      expect(true).toBe(false); // Não deve chegar aqui
+    } catch (error: any) {
+      expect(error).toBeInstanceOf(BusinessRuleError);
+      expect(error.message).toContain("já está em uso");
+    }
   });
 });

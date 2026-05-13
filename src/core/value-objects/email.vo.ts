@@ -1,3 +1,5 @@
+import { BusinessRuleError } from "../errors/app-error";
+
 /**
  * Value Object que representa um e-mail válido.
  * @class Email
@@ -7,11 +9,11 @@ export class Email {
 
   /**
    * @param {string} email - Endereço de e-mail bruto.
-   * @throws Error se o e-mail for inválido.
+   * @throws BusinessRuleError se o e-mail for inválido.
    */
   constructor(email: string) {
     if (!this.validate(email)) {
-      throw new Error(`E-mail inválido: ${email}`);
+      throw new BusinessRuleError(`E-mail inválido: ${email}`);
     }
     this.value = email.toLowerCase().trim();
   }
