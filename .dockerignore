@@ -1,0 +1,10 @@
+node_modules
+.git
+.gitignore
+.antigravity
+tests
+**/*.test.ts
+**/*.spec.ts
+README.md
+Dockerfile
+fly.toml

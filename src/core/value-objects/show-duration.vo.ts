@@ -1,0 +1,23 @@
+/**
+ * Value Object que valida a duração permitida para um show (RN01).
+ * @class ShowDuration
+ */
+export class ShowDuration {
+  /**
+   * @param {number} hours - Duração em horas.
+   * @throws Error se estiver fora do range [4, 24].
+   */
+  constructor(public readonly hours: number) {
+    if (hours < 4 || hours > 24) {
+      throw new Error("A duração do show deve ser entre 4 e 24 horas (RN01).");
+    }
+  }
+
+  /**
+   * Converte a duração para milissegundos (útil para cálculos de expiração).
+   * @returns {number}
+   */
+  toMilliseconds(): number {
+    return this.hours * 60 * 60 * 1000;
+  }
+}
