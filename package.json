@@ -11,7 +11,10 @@
     "test:integration": "bun test --filter integration",
     "test:e2e": "bun test --filter e2e",
     "test:coverage": "bun test --coverage",
-    "test:staged": "bun test $(git diff --staged --name-only | grep '\\.test\\.ts$')"
+    "test:staged": "bun test $(git diff --staged --name-only | grep '\\.test\\.ts$')",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:push:test": "bun --env-file=.env.test drizzle-kit push"
   },
   "devDependencies": {
     "@types/bun": "latest",
