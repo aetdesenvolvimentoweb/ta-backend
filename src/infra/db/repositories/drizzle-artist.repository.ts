@@ -15,12 +15,14 @@ export class DrizzleArtistRepository implements IArtistRepository {
       id: artist.id,
       name: artist.name,
       email: artist.email.getValue(),
+      passwordHash: artist.passwordHash,
       isPremium: artist.isPremium,
       socials: artist.socials,
     }).onConflictDoUpdate({
       target: artists.id,
       set: {
         name: artist.name,
+        passwordHash: artist.passwordHash,
         isPremium: artist.isPremium,
         socials: artist.socials,
       }
@@ -36,6 +38,7 @@ export class DrizzleArtistRepository implements IArtistRepository {
       row.id,
       row.name,
       new Email(row.email),
+      row.passwordHash || undefined,
       row.socials || {},
       row.isPremium
     );
@@ -50,6 +53,7 @@ export class DrizzleArtistRepository implements IArtistRepository {
       row.id,
       row.name,
       new Email(row.email),
+      row.passwordHash || undefined,
       row.socials || {},
       row.isPremium
     );

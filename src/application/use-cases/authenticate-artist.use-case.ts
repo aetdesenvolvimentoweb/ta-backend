@@ -33,22 +33,21 @@ export class AuthenticateArtistUseCase {
       throw new UnauthorizedError("E-mail ou senha inválidos.");
     }
 
-    // 2. No mundo real, as entidades teriam um campo 'passwordHash'. 
-    // Como estamos definindo as entidades agora, vou assumir que o repositório 
-    // nos daria acesso a esse dado ou teríamos uma entidade de 'Account'.
-    
-    // Para manter o KISS por enquanto, vamos fingir que o repositório 
-    // busca o hash de alguma forma vinculada ao artista.
-    
-    // TODO: Adicionar campo passwordHash na persistência do Artista futuramente.
-    // Por enquanto, o Mock vai simular essa validação.
+    // 2. Verificar se o artista possui hash de senha cadastrado
+    if (!artist.passwordHash) {
+      this.logger.warn(`Tentativa de login falha (sem senha cadastrada): ${input.email}`)
+      throw new UnauthorizedError("E-mail ou senha inválidos.")
+    }
+
+    // 3. Verificar senha
     const isPasswordValid = await this.passwordHasher.compare(
-      input.passwordInPlainText, 
-      "hash_simulado_do_banco" 
+      input.passwordInPlainText,
+      artist.passwordHash
     );
 
     if (!isPasswordValid) {
-      throw new Error("E-mail ou senha inválidos.");
+      this.logger.warn(`Tentativa de login falha (senha incorreta): ${input.email}`)
+      throw new UnauthorizedError("E-mail ou senha inválidos.")
     }
 
     return artist;

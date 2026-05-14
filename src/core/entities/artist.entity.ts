@@ -16,6 +16,7 @@ export class Artist {
     public readonly id: string,
     public name: string,
     public readonly email: Email,
+    public passwordHash?: string,
     public socials: Record<string, string> = {},
     public isPremium: boolean = false
   ) {}

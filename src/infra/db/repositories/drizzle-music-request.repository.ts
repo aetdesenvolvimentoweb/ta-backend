@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, count } from "drizzle-orm";
 import { db } from "../client";
 import { musicRequests } from "../schema";
 import { MusicRequest } from "../../../core/entities/music-request.entity";
@@ -88,6 +88,18 @@ export class DrizzleMusicRequestRepository implements IMusicRequestRepository {
       row.status,
       row.createdAt
     ));
+  }
+
+  async countFreeRequestsByCustomer(showId: string, customerSessionId: string): Promise<number> {
+    const [result] = await db.select({ total: count() }).from(musicRequests)
+      .where(
+        and(
+          eq(musicRequests.showId, showId),
+          eq(musicRequests.customerSessionId, customerSessionId),
+          eq(musicRequests.tipAmountCents, 0)
+        )
+      );
+    return result?.total ?? 0;
   }
 
   /**

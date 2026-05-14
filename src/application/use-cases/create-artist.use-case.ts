@@ -2,6 +2,7 @@ import { Artist } from "../../core/entities/artist.entity";
 import { BusinessRuleError } from "../../core/errors/app-error";
 import { IArtistRepository } from "../../core/ports/artist.repository";
 import { ILogger } from "../../core/ports/logger.port";
+import { IPasswordHasher } from "../../core/ports/password-hasher.port";
 import { Email } from "../../core/value-objects/email.vo";
 
 /**
@@ -10,6 +11,7 @@ import { Email } from "../../core/value-objects/email.vo";
 export interface CreateArtistInput {
   name: string;
   email: string;
+  password?: string;
   socials?: Record<string, string>;
 }
 
@@ -20,6 +22,7 @@ export interface CreateArtistInput {
 export class CreateArtistUseCase {
   constructor(
     private artistRepository: IArtistRepository,
+    private passwordHasher: IPasswordHasher,
     private logger: ILogger
   ) {}
 
@@ -36,17 +39,24 @@ export class CreateArtistUseCase {
       throw new BusinessRuleError("Este e-mail já está em uso por outro artista.");
     }
 
-    // 2. Criar a entidade (O ID deve ser gerado, aqui usaremos o crypto do Bun/Node)
+    // 2. Hashear senha se fornecida
+    let passwordHash: string | undefined;
+    if (input.password) {
+      passwordHash = await this.passwordHasher.hash(input.password);
+    }
+
+    // 3. Criar a entidade (O ID deve ser gerado, aqui usaremos o crypto do Bun/Node)
     const id = crypto.randomUUID();
     const artist = new Artist(
       id,
       input.name,
       emailVO,
+      passwordHash,
       input.socials ?? {},
       false // Inicia como não-premium
     );
 
-    // 3. Persistir
+    // 4. Persistir
     await this.artistRepository.save(artist);
 
     this.logger.info(`Novo artista cadastrado: ${artist.name} (${artist.id})`);
