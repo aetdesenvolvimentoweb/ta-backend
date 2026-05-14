@@ -21,7 +21,7 @@ const mockLogger = { info: () => {}, error: () => {}, warn: () => {}, debug: () 
 describe("CancelMusicRequest Use Case (RN05)", () => {
   test("deve cancelar um pedido pendente", async () => {
     const repo = new MockRequestRepo();
-    const req = new MusicRequest("req-1", "show-1", "song-1", "André", null, new Money(0));
+    const req = new MusicRequest("req-1", "show-1", "song-1", "André", null, null, new Money(0));
     await repo.save(req);
 
     const useCase = new CancelMusicRequestUseCase(repo as any, mockLogger as any);
@@ -33,7 +33,7 @@ describe("CancelMusicRequest Use Case (RN05)", () => {
 
   test("não deve cancelar pedido já tocado", async () => {
     const repo = new MockRequestRepo();
-    const req = new MusicRequest("req-1", "show-1", "song-1", "André", null, new Money(0), 'played');
+    const req = new MusicRequest("req-1", "show-1", "song-1", "André", null, null, new Money(0), 'played');
     await repo.save(req);
 
     const useCase = new CancelMusicRequestUseCase(repo as any, mockLogger as any);

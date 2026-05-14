@@ -59,6 +59,7 @@ export class RequestMusicUseCase {
       input.showId,
       input.songId,
       input.customerName,
+      input.customerSessionId,
       input.message ?? null,
       tip,
       'pending'

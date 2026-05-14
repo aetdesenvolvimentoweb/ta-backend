@@ -35,7 +35,7 @@ describe("FinishShow Use Case", () => {
     const show = new Show("show-1", "artist-1", new Date(), new ShowDuration(4), 'active');
     await showRepo.save(show);
     
-    const req = new MusicRequest("req-1", "show-1", "song-1", "A", null, new Money(0));
+    const req = new MusicRequest("req-1", "show-1", "song-1", "A", null, null, new Money(0));
     await reqRepo.save(req);
 
     const useCase = new FinishShowUseCase(showRepo as any, reqRepo as any, mockLogger as any);

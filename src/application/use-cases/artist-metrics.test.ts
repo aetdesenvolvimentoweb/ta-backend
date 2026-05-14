@@ -8,9 +8,9 @@ import { ShowDuration } from "../../core/value-objects/show-duration.vo";
 class MockRequestRepo {
   async findByShowId(showId: string) {
     return [
-      new MusicRequest("1", showId, "s1", "A", null, new Money(10000), 'played'), // R$ 100,00
-      new MusicRequest("2", showId, "s2", "B", null, new Money(5000), 'played'),  // R$ 50,00
-      new MusicRequest("3", showId, "s3", "C", null, new Money(2000), 'pending'), // R$ 20,00 (não conta)
+      new MusicRequest("1", showId, "s1", "A", null, null, new Money(10000), 'played'), // R$ 100,00
+      new MusicRequest("2", showId, "s2", "B", null, null, new Money(5000), 'played'),  // R$ 50,00
+      new MusicRequest("3", showId, "s3", "C", null, null, new Money(2000), 'pending'), // R$ 20,00 (não conta)
     ];
   }
   async save() {}

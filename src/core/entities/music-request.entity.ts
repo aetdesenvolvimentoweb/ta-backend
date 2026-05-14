@@ -20,6 +20,7 @@ export class MusicRequest {
     public readonly showId: string,
     public readonly songId: string,
     public customerName: string,
+    public readonly customerSessionId: string | null = null,
     public message: string | null = null,
     public tip: Money = new Money(0),
     public status: 'pending' | 'played' | 'cancelled' | 'refunded' = 'pending',

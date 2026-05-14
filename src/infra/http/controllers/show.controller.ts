@@ -24,7 +24,7 @@ export const showController = (
         id: show.id,
         artistId: show.artistId,
         startTime: show.startTime,
-        durationHours: show.duration.getValue(),
+        durationHours: show.duration.hours,
         status: show.status
       };
     }, {

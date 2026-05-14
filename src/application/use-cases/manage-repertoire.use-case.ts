@@ -4,6 +4,22 @@ import { ISongRepository } from "../../core/ports/song.repository";
 import { IStyleRepository } from "../../core/ports/style.repository";
 import { ILogger } from "../../core/ports/logger.port";
 
+/**
+ * Caso de Uso: Listar o repertório de um artista.
+ */
+export class GetRepertoireUseCase {
+  constructor(
+    private songRepository: ISongRepository,
+    private logger: ILogger
+  ) {}
+
+  async execute(artistId: string): Promise<Song[]> {
+    const songs = await this.songRepository.findByArtistId(artistId);
+    this.logger.info(`Repertório listado para artista ${artistId}: ${songs.length} músicas`);
+    return songs;
+  }
+}
+
 export interface AddSongInput {
   artistId: string;
   title: string;

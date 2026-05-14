@@ -25,9 +25,9 @@ describe("GetShowRequests Use Case (RN02)", () => {
   test("deve ordenar pedidos por gorjeta (maior primeiro) e depois por chegada", async () => {
     const now = Date.now();
     
-    const req1 = new MusicRequest("1", "show-1", "s1", "A", null, new Money(1000), 'pending', new Date(now));
-    const req2 = new MusicRequest("2", "show-1", "s2", "B", null, new Money(2000), 'pending', new Date(now + 1000));
-    const req3 = new MusicRequest("3", "show-1", "s3", "C", null, new Money(1000), 'pending', new Date(now - 1000));
+    const req1 = new MusicRequest("1", "show-1", "s1", "A", null, null, new Money(1000), 'pending', new Date(now));
+    const req2 = new MusicRequest("2", "show-1", "s2", "B", null, null, new Money(2000), 'pending', new Date(now + 1000));
+    const req3 = new MusicRequest("3", "show-1", "s3", "C", null, null, new Money(1000), 'pending', new Date(now - 1000));
 
     // Ordem de inserção bagunçada
     const repo = new MockRequestRepo([req1, req2, req3]);

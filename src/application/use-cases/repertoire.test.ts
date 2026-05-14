@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { AddSongUseCase, ToggleSongAvailabilityUseCase } from "./manage-repertoire.use-case";
+import { AddSongUseCase, GetRepertoireUseCase, ToggleSongAvailabilityUseCase } from "./manage-repertoire.use-case";
 import { Song } from "../../core/entities/song.entity";
 
 class MockSongRepo {
@@ -10,7 +10,7 @@ class MockSongRepo {
     else this.songs.push(s);
   }
   async findById(id: string) { return this.songs.find(s => s.id === id) || null; }
-  async findByArtistId() { return []; }
+  async findByArtistId(artistId: string) { return this.songs.filter(s => s.artistId === artistId); }
   async delete() {}
 }
 
@@ -41,6 +41,20 @@ describe("Manage Repertoire Use Cases", () => {
 
     expect(song.title).toBe("Evidências");
     expect(song.isAvailable).toBe(true);
+  });
+
+  test("deve listar o repertório de um artista", async () => {
+    const songRepo = new MockSongRepo();
+    const addSong = new AddSongUseCase(songRepo as any, new MockStyleRepo() as any, mockLogger as any);
+    const getRepertoire = new GetRepertoireUseCase(songRepo as any, mockLogger as any);
+
+    await addSong.execute({ artistId: "artist-1", title: "Canção A", originalArtist: "Artista X", styleName: "MPB" });
+    await addSong.execute({ artistId: "artist-1", title: "Canção B", originalArtist: "Artista Y", styleName: "Rock" });
+    await addSong.execute({ artistId: "artist-2", title: "Outra", originalArtist: "Artista Z", styleName: "Pop" });
+
+    const songs = await getRepertoire.execute("artist-1");
+    expect(songs.length).toBe(2);
+    expect(songs.every(s => s.artistId === "artist-1")).toBe(true);
   });
 
   test("deve alternar disponibilidade da música", async () => {
