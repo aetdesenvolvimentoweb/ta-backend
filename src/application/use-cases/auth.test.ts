@@ -2,7 +2,7 @@ import { expect, test, describe } from "bun:test";
 import { AuthenticateArtistUseCase } from "./authenticate-artist.use-case";
 import { Artist } from "../../core/entities/artist.entity";
 import { Email } from "../../core/value-objects/email.vo";
-import { IPasswordHasher } from "../../core/ports/password-hasher.port";
+import type { IPasswordHasher } from "../../core/ports/password-hasher.port";
 
 class MockArtistRepo {
   async findByEmail(email: string) {

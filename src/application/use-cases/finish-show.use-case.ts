@@ -1,6 +1,6 @@
-import { IShowRepository } from "../../core/ports/show.repository";
-import { IMusicRequestRepository } from "../../core/ports/music-request.repository";
-import { ILogger } from "../../core/ports/logger.port";
+import type { IShowRepository } from "../../core/ports/show.repository";
+import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
+import type { ILogger } from "../../core/ports/logger.port";
 import { NotFoundError, BusinessRuleError } from "../../core/errors/app-error";
 
 /**

@@ -3,7 +3,7 @@ import { db } from "../client";
 import { musicRequests } from "../schema";
 import { MusicRequest } from "../../../core/entities/music-request.entity";
 import { Money } from "../../../core/value-objects/money.vo";
-import { IMusicRequestRepository } from "../../../core/ports/music-request.repository";
+import type { IMusicRequestRepository } from "../../../core/ports/music-request.repository";
 
 /**
  * Implementação do repositório de Pedidos de Música usando Drizzle ORM.

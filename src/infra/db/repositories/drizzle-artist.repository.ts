@@ -3,7 +3,7 @@ import { db } from "../client";
 import { artists } from "../schema";
 import { Artist } from "../../../core/entities/artist.entity";
 import { Email } from "../../../core/value-objects/email.vo";
-import { IArtistRepository } from "../../../core/ports/artist.repository";
+import type { IArtistRepository } from "../../../core/ports/artist.repository";
 
 /**
  * Implementação do repositório de Artistas usando Drizzle ORM.

@@ -1,9 +1,9 @@
 import { MusicRequest } from "../../core/entities/music-request.entity";
 import { BusinessRuleError, NotFoundError } from "../../core/errors/app-error";
-import { IMusicRequestRepository } from "../../core/ports/music-request.repository";
-import { IShowRepository } from "../../core/ports/show.repository";
-import { ISongRepository } from "../../core/ports/song.repository";
-import { ILogger } from "../../core/ports/logger.port";
+import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
+import type { IShowRepository } from "../../core/ports/show.repository";
+import type { ISongRepository } from "../../core/ports/song.repository";
+import type { ILogger } from "../../core/ports/logger.port";
 import { Money } from "../../core/value-objects/money.vo";
 
 export interface RequestMusicInput {

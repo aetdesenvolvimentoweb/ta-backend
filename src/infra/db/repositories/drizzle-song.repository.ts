@@ -2,7 +2,7 @@ import { eq, and } from "drizzle-orm";
 import { db } from "../client";
 import { songs } from "../schema";
 import { Song } from "../../../core/entities/song.entity";
-import { ISongRepository } from "../../../core/ports/song.repository";
+import type { ISongRepository } from "../../../core/ports/song.repository";
 
 /**
  * Implementação do repositório de Músicas usando Drizzle ORM.

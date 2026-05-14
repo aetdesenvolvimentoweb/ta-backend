@@ -1,5 +1,6 @@
-import pino, { Logger as PinoInstance } from "pino";
-import { ILogger } from "../../core/ports/logger.port";
+import pino from "pino";
+import type { Logger as PinoInstance } from "pino";
+import type { ILogger } from "../../core/ports/logger.port";
 
 /**
  * Implementação do ILogger utilizando a biblioteca Pino.

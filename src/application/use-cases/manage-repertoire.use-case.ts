@@ -1,8 +1,8 @@
 import { Song } from "../../core/entities/song.entity";
 import { NotFoundError } from "../../core/errors/app-error";
-import { ISongRepository } from "../../core/ports/song.repository";
-import { IStyleRepository } from "../../core/ports/style.repository";
-import { ILogger } from "../../core/ports/logger.port";
+import type { ISongRepository } from "../../core/ports/song.repository";
+import type { IStyleRepository } from "../../core/ports/style.repository";
+import type { ILogger } from "../../core/ports/logger.port";
 
 /**
  * Caso de Uso: Listar o repertório de um artista.

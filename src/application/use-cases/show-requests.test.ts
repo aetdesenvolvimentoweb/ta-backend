@@ -39,8 +39,8 @@ describe("GetShowRequests Use Case (RN02)", () => {
     // 1. req2 (R$ 20,00)
     // 2. req3 (R$ 10,00 - mais antigo que req1)
     // 3. req1 (R$ 10,00 - mais recente)
-    expect(sorted[0].id).toBe("2");
-    expect(sorted[1].id).toBe("3");
-    expect(sorted[2].id).toBe("1");
+    expect(sorted[0]!.id).toBe("2");
+    expect(sorted[1]!.id).toBe("3");
+    expect(sorted[2]!.id).toBe("1");
   });
 });

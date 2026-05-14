@@ -1,7 +1,7 @@
 import { eq, ilike } from "drizzle-orm";
 import { db } from "../client";
 import { styles, songs } from "../schema";
-import { IStyleRepository, Style } from "../../../core/ports/style.repository";
+import type { IStyleRepository, Style } from "../../../core/ports/style.repository";
 
 /**
  * Implementação do repositório de Estilos Musicais usando Drizzle ORM.

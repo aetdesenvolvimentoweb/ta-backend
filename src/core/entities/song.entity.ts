@@ -16,7 +16,7 @@ export class Song {
     public readonly artistId: string,
     public title: string,
     public originalArtist: string,
-    public styleId: string,
+    public styleId: string | undefined,
     public isAvailable: boolean = true
   ) {}
 

@@ -1,5 +1,5 @@
 import { UnauthorizedError } from "../../core/errors/app-error";
-import { ILogger } from "../../core/ports/logger.port";
+import type { ILogger } from "../../core/ports/logger.port";
 
 /**
  * Interface para gerenciar a lista de e-mails autorizados (Whitelist) de administradores.

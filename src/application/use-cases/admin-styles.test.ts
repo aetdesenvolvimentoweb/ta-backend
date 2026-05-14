@@ -1,6 +1,6 @@
 import { expect, test, describe } from "bun:test";
 import { CreateStyleUseCase, MergeStylesUseCase } from "./admin-styles.use-case";
-import { IStyleRepository, Style } from "../../core/ports/style.repository";
+import type { IStyleRepository, Style } from "../../core/ports/style.repository";
 
 class MockStyleRepo implements IStyleRepository {
   private styles: Style[] = [];
@@ -34,6 +34,6 @@ describe("Admin Style Use Cases (RN10)", () => {
 
     const all = await repo.findAll();
     expect(all.length).toBe(1);
-    expect(all[0].name).toBe("Rock");
+    expect(all[0]!.name).toBe("Rock");
   });
 });

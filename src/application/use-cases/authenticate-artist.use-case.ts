@@ -1,8 +1,8 @@
 import { Artist } from "../../core/entities/artist.entity";
 import { UnauthorizedError } from "../../core/errors/app-error";
-import { IArtistRepository } from "../../core/ports/artist.repository";
-import { IPasswordHasher } from "../../core/ports/password-hasher.port";
-import { ILogger } from "../../core/ports/logger.port";
+import type { IArtistRepository } from "../../core/ports/artist.repository";
+import type { IPasswordHasher } from "../../core/ports/password-hasher.port";
+import type { ILogger } from "../../core/ports/logger.port";
 import { Email } from "../../core/value-objects/email.vo";
 
 export interface AuthenticateArtistInput {

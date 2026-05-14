@@ -1,4 +1,4 @@
-import { IPasswordHasher } from "../../core/ports/password-hasher.port";
+import type { IPasswordHasher } from "../../core/ports/password-hasher.port";
 
 /**
  * Implementação do IPasswordHasher utilizando as funções nativas do Bun.

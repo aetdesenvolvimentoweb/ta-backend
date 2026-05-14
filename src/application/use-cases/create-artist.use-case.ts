@@ -1,8 +1,8 @@
 import { Artist } from "../../core/entities/artist.entity";
 import { BusinessRuleError } from "../../core/errors/app-error";
-import { IArtistRepository } from "../../core/ports/artist.repository";
-import { ILogger } from "../../core/ports/logger.port";
-import { IPasswordHasher } from "../../core/ports/password-hasher.port";
+import type { IArtistRepository } from "../../core/ports/artist.repository";
+import type { ILogger } from "../../core/ports/logger.port";
+import type { IPasswordHasher } from "../../core/ports/password-hasher.port";
 import { Email } from "../../core/value-objects/email.vo";
 
 /**

@@ -1,8 +1,8 @@
 import { Show } from "../../core/entities/show.entity";
 import { BusinessRuleError, NotFoundError } from "../../core/errors/app-error";
-import { IShowRepository } from "../../core/ports/show.repository";
-import { IArtistRepository } from "../../core/ports/artist.repository";
-import { ILogger } from "../../core/ports/logger.port";
+import type { IShowRepository } from "../../core/ports/show.repository";
+import type { IArtistRepository } from "../../core/ports/artist.repository";
+import type { ILogger } from "../../core/ports/logger.port";
 import { ShowDuration } from "../../core/value-objects/show-duration.vo";
 
 export interface StartShowInput {

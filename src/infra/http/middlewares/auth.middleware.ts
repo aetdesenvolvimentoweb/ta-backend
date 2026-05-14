@@ -13,24 +13,22 @@ export const authMiddleware = new Elysia()
       secret: process.env.JWT_SECRET!
     })
   )
-  .derive(async ({ jwt, headers: { authorization } }) => {
-    return {
-      getArtistId: async () => {
-        if (!authorization) {
-          throw new UnauthorizedError("Token não fornecido.");
-        }
-
-        const token = authorization.startsWith("Bearer ") 
-          ? authorization.slice(7) 
-          : authorization;
-
-        const payload = await jwt.verify(token);
-
-        if (!payload) {
-          throw new UnauthorizedError("Token inválido ou expirado.");
-        }
-
-        return payload.sub as string;
+  .derive({ as: 'global' }, ({ jwt, headers: { authorization } }) => ({
+    getArtistId: async () => {
+      if (!authorization) {
+        throw new UnauthorizedError("Token não fornecido.");
       }
-    };
-  });
+
+      const token = authorization.startsWith("Bearer ")
+        ? authorization.slice(7)
+        : authorization;
+
+      const payload = await jwt.verify(token);
+
+      if (!payload) {
+        throw new UnauthorizedError("Token inválido ou expirado.");
+      }
+
+      return payload.sub as string;
+    }
+  }));

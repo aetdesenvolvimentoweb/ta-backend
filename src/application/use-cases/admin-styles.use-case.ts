@@ -1,6 +1,6 @@
 import { BusinessRuleError, NotFoundError } from "../../core/errors/app-error";
-import { IStyleRepository, Style } from "../../core/ports/style.repository";
-import { ILogger } from "../../core/ports/logger.port";
+import type { IStyleRepository, Style } from "../../core/ports/style.repository";
+import type { ILogger } from "../../core/ports/logger.port";
 
 /**
  * Caso de Uso: Criar um estilo musical oficial (Admin).

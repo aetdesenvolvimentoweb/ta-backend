@@ -3,7 +3,7 @@ import { db } from "../client";
 import { shows } from "../schema";
 import { Show } from "../../../core/entities/show.entity";
 import { ShowDuration } from "../../../core/value-objects/show-duration.vo";
-import { IShowRepository } from "../../../core/ports/show.repository";
+import type { IShowRepository } from "../../../core/ports/show.repository";
 
 /**
  * Implementação do repositório de Shows usando Drizzle ORM.

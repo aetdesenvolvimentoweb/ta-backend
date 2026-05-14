@@ -1,7 +1,7 @@
-import { IMusicRequestRepository } from "../../core/ports/music-request.repository";
-import { IArtistRepository } from "../../core/ports/artist.repository";
-import { ISongRepository } from "../../core/ports/song.repository";
-import { ILogger } from "../../core/ports/logger.port";
+import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
+import type { IArtistRepository } from "../../core/ports/artist.repository";
+import type { ISongRepository } from "../../core/ports/song.repository";
+import type { ILogger } from "../../core/ports/logger.port";
 import { Money } from "../../core/value-objects/money.vo";
 
 export interface AppMetrics {
