@@ -22,6 +22,6 @@ describe("Admin Whitelist Use Case", () => {
     const repo = new MockWhitelistRepo();
     const useCase = new ValidateAdminWhitelistUseCase(repo as any, mockLogger as any);
     
-    expect(useCase.execute("hacker@gmail.com")).rejects.toThrow("Acesso negado");
+    await expect(useCase.execute("hacker@gmail.com")).rejects.toThrow("Acesso negado");
   });
 });

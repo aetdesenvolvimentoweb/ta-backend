@@ -36,7 +36,7 @@ describe("CancelMusicRequest Use Case (RN05)", () => {
     const req = new MusicRequest("req-1", "show-1", "song-1", "André", null, new Money(0), 'played');
     await repo.save(req);
 
-    const useCase = new CancelMusicRequestUseCase(repo);
-    expect(useCase.execute("req-1")).rejects.toThrow("já foi tocado");
+    const useCase = new CancelMusicRequestUseCase(repo as any, mockLogger as any);
+    await expect(useCase.execute("req-1")).rejects.toThrow("já foi tocado");
   });
 });

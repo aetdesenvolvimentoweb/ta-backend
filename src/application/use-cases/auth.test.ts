@@ -7,7 +7,7 @@ import { IPasswordHasher } from "../../core/ports/password-hasher.port";
 class MockArtistRepo {
   async findByEmail(email: string) {
     if (email === "artista@show.com") {
-      return new Artist("id-1", "João", new Email(email));
+      return new Artist("id-1", "João", new Email(email), "hash_correta");
     }
     return null;
   }
@@ -45,7 +45,7 @@ describe("AuthenticateArtist Use Case", () => {
     const hasher = new MockHasher();
     const useCase = new AuthenticateArtistUseCase(repo as any, hasher, mockLogger as any);
 
-    expect(useCase.execute({
+    await expect(useCase.execute({
       email: "inexistente@show.com",
       passwordInPlainText: "senha123"
     })).rejects.toThrow("E-mail ou senha inválidos");
@@ -59,7 +59,7 @@ describe("AuthenticateArtist Use Case", () => {
     // Mockando senha incorreta
     hasher.compare = async () => false;
 
-    expect(useCase.execute({
+    await expect(useCase.execute({
       email: "artista@show.com",
       passwordInPlainText: "errada"
     })).rejects.toThrow("E-mail ou senha inválidos");

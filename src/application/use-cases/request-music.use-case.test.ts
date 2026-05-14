@@ -60,7 +60,7 @@ describe("RequestMusic Use Case", () => {
 
   test("deve impedir o segundo pedido gratuito (RN09)", async () => {
     const requestRepo = new MockRequestRepo();
-    const useCase = new RequestMusicUseCase(requestRepo, new MockShowRepo(), new MockSongRepo());
+    const useCase = new RequestMusicUseCase(requestRepo, new MockShowRepo(), new MockSongRepo(), mockLogger as any);
 
     await useCase.execute({
       showId: "show-1",
@@ -70,7 +70,7 @@ describe("RequestMusic Use Case", () => {
       tipAmountInCents: 0
     });
 
-    expect(useCase.execute({
+    await expect(useCase.execute({
       showId: "show-1",
       songId: "song-2",
       customerName: "André",
@@ -81,7 +81,7 @@ describe("RequestMusic Use Case", () => {
 
   test("deve permitir o segundo pedido se houver gorjeta", async () => {
     const requestRepo = new MockRequestRepo();
-    const useCase = new RequestMusicUseCase(requestRepo, new MockShowRepo(), new MockSongRepo());
+    const useCase = new RequestMusicUseCase(requestRepo, new MockShowRepo(), new MockSongRepo(), mockLogger as any);
 
     await useCase.execute({
       showId: "show-1",

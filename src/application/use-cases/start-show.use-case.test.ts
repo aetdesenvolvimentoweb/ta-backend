@@ -51,7 +51,7 @@ describe("StartShow Use Case", () => {
 
     await useCase.execute({ artistId: "artist-1", durationHours: 4 });
     
-    expect(useCase.execute({ artistId: "artist-1", durationHours: 4 }))
+    await expect(useCase.execute({ artistId: "artist-1", durationHours: 4 }))
       .rejects.toThrow("já possui um show ativo");
   });
 

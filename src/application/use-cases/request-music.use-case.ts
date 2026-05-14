@@ -49,7 +49,7 @@ export class RequestMusicUseCase {
       );
       
       if (freeRequestsCount >= 1) {
-        throw new Error("Você já utilizou seu pedido gratuito para este show (RN09). Adicione uma gorjeta para pedir mais!");
+        throw new BusinessRuleError("Você já utilizou seu pedido gratuito para este show (RN09). Adicione uma gorjeta para pedir mais!");
       }
     }
 

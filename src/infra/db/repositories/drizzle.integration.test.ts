@@ -57,9 +57,63 @@ describe("Drizzle Repositories Integration", () => {
     expect(updated?.status).toBe('expired');
   });
 
-  test("deve realizar o merge de estilos musicais em uma transação", async () => {
-    // Implementação pendente de teste mais complexo se necessário, 
-    // mas aqui validamos a infraestrutura básica.
-    expect(true).toBe(true);
+  test("deve encontrar artista por e-mail", async () => {
+    const repo = new DrizzleArtistRepository();
+    const artist = new Artist(crypto.randomUUID(), "Email Artist", new Email("email@test.com"), "hash123");
+
+    await repo.save(artist);
+
+    const found = await repo.findByEmail("email@test.com");
+    expect(found).not.toBeNull();
+    expect(found?.name).toBe("Email Artist");
+    expect(found?.passwordHash).toBe("hash123");
+
+    const notFound = await repo.findByEmail("inexistente@test.com");
+    expect(notFound).toBeNull();
+  });
+
+  test("deve deletar um artista", async () => {
+    const repo = new DrizzleArtistRepository();
+    const artist = new Artist(crypto.randomUUID(), "Delete Artist", new Email("delete@test.com"));
+
+    await repo.save(artist);
+    await repo.delete(artist.id);
+
+    const found = await repo.findById(artist.id);
+    expect(found).toBeNull();
+  });
+
+  test("deve encontrar show ativo por artista", async () => {
+    const artistRepo = new DrizzleArtistRepository();
+    const showRepo = new DrizzleShowRepository();
+
+    const artist = new Artist(crypto.randomUUID(), "Active Show Artist", new Email("active@test.com"));
+    await artistRepo.save(artist);
+
+    const show = new Show(crypto.randomUUID(), artist.id, new Date(), new ShowDuration(4), 'active');
+    await showRepo.save(show);
+
+    const found = await showRepo.findActiveByArtistId(artist.id);
+    expect(found).not.toBeNull();
+    expect(found?.id).toBe(show.id);
+    expect(found?.status).toBe('active');
+
+    // Artista sem show ativo retorna null
+    const notFound = await showRepo.findActiveByArtistId(crypto.randomUUID());
+    expect(notFound).toBeNull();
+  });
+
+  test("deve listar todos os shows", async () => {
+    const artistRepo = new DrizzleArtistRepository();
+    const showRepo = new DrizzleShowRepository();
+
+    const artist = new Artist(crypto.randomUUID(), "List Artist", new Email("list@test.com"));
+    await artistRepo.save(artist);
+
+    await showRepo.save(new Show(crypto.randomUUID(), artist.id, new Date(), new ShowDuration(4), 'active'));
+    await showRepo.save(new Show(crypto.randomUUID(), artist.id, new Date(), new ShowDuration(4), 'finished'));
+
+    const all = await showRepo.findAll();
+    expect(all.length).toBe(2);
   });
 });

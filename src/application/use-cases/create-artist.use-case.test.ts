@@ -36,10 +36,12 @@ class InMemoryArtistRepository {
   }
 }
 
+const mockHasher = { hash: async (p: string) => "hash_" + p, compare: async () => false };
+
 describe("CreateArtist Use Case", () => {
   test("deve criar um artista com sucesso", async () => {
     const repo = new InMemoryArtistRepository();
-    const useCase = new CreateArtistUseCase(repo, mockLogger as any);
+    const useCase = new CreateArtistUseCase(repo, mockHasher as any, mockLogger as any);
 
     const input = {
       name: "João do Violão",
@@ -60,7 +62,7 @@ describe("CreateArtist Use Case", () => {
 
   test("deve lançar erro se o e-mail já existir", async () => {
     const repo = new InMemoryArtistRepository();
-    const useCase = new CreateArtistUseCase(repo, mockLogger as any);
+    const useCase = new CreateArtistUseCase(repo, mockHasher as any, mockLogger as any);
 
     const input = {
       name: "João",
