@@ -1,6 +1,6 @@
-import { eq, and, desc, count } from "drizzle-orm";
+import { eq, and, desc, count, sql } from "drizzle-orm";
 import { db } from "../client";
-import { musicRequests } from "../schema";
+import { musicRequests, songs, shows, artists } from "../schema";
 import { MusicRequest } from "../../../core/entities/music-request.entity";
 import { Money } from "../../../core/value-objects/money.vo";
 import type { IMusicRequestRepository } from "../../../core/ports/music-request.repository";
@@ -115,5 +115,65 @@ export class DrizzleMusicRequestRepository implements IMusicRequestRepository {
           eq(musicRequests.status, 'pending')
         )
       );
+  }
+
+  async aggregateAppMetrics(): Promise<{
+    totalVolumeCents: number;
+    topSongsByRequestCount: { title: string; count: number }[];
+    topArtistsByRevenue: { name: string; revenueCents: number }[];
+  }> {
+    const [volume] = await db
+      .select({ total: sql<number>`COALESCE(SUM(${musicRequests.tipAmountCents}), 0)::int` })
+      .from(musicRequests)
+      .where(eq(musicRequests.status, 'played'));
+
+    const topSongsRows = await db
+      .select({
+        title: songs.title,
+        count: sql<number>`COUNT(${musicRequests.id})::int`.as('cnt'),
+      })
+      .from(musicRequests)
+      .innerJoin(songs, eq(songs.id, musicRequests.songId))
+      .groupBy(songs.title)
+      .orderBy(sql`cnt DESC`)
+      .limit(10);
+
+    const topArtistsRows = await db
+      .select({
+        name: artists.name,
+        revenueCents: sql<number>`COALESCE(SUM(${musicRequests.tipAmountCents}), 0)::int`.as('revenue'),
+      })
+      .from(musicRequests)
+      .innerJoin(shows, eq(shows.id, musicRequests.showId))
+      .innerJoin(artists, eq(artists.id, shows.artistId))
+      .where(eq(musicRequests.status, 'played'))
+      .groupBy(artists.name)
+      .orderBy(sql`revenue DESC`)
+      .limit(10);
+
+    return {
+      totalVolumeCents: Number(volume?.total ?? 0),
+      topSongsByRequestCount: topSongsRows.map(r => ({ title: r.title, count: Number(r.count) })),
+      topArtistsByRevenue: topArtistsRows.map(r => ({ name: r.name, revenueCents: Number(r.revenueCents) })),
+    };
+  }
+
+  async aggregateArtistMetrics(artistId: string): Promise<{
+    totalEarnedCents: number;
+    totalRequestsPlayed: number;
+  }> {
+    const [row] = await db
+      .select({
+        total: sql<number>`COALESCE(SUM(${musicRequests.tipAmountCents}), 0)::int`,
+        played: sql<number>`COUNT(${musicRequests.id})::int`,
+      })
+      .from(musicRequests)
+      .innerJoin(shows, eq(shows.id, musicRequests.showId))
+      .where(and(eq(shows.artistId, artistId), eq(musicRequests.status, 'played')));
+
+    return {
+      totalEarnedCents: Number(row?.total ?? 0),
+      totalRequestsPlayed: Number(row?.played ?? 0),
+    };
   }
 }

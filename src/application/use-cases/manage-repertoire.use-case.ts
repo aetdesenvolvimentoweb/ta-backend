@@ -1,5 +1,5 @@
 import { Song } from "../../core/entities/song.entity";
-import { NotFoundError } from "../../core/errors/app-error";
+import { NotFoundError, UnauthorizedError } from "../../core/errors/app-error";
 import type { ISongRepository } from "../../core/ports/song.repository";
 import type { IStyleRepository } from "../../core/ports/style.repository";
 import type { ILogger } from "../../core/ports/logger.port";
@@ -64,8 +64,14 @@ export class AddSongUseCase {
   }
 }
 
+export interface ToggleSongAvailabilityInput {
+  songId: string;
+  isAvailable: boolean;
+  artistId: string;
+}
+
 /**
- * Caso de Uso: Alternar disponibilidade da música (RN05/RN08).
+ * Caso de Uso: Alternar disponibilidade da música (RN05).
  */
 export class ToggleSongAvailabilityUseCase {
   constructor(
@@ -73,14 +79,20 @@ export class ToggleSongAvailabilityUseCase {
     private logger: ILogger
   ) {}
 
-  async execute(songId: string, isAvailable: boolean): Promise<void> {
-    const song = await this.songRepository.findById(songId);
+  async execute(input: ToggleSongAvailabilityInput): Promise<void> {
+    const song = await this.songRepository.findById(input.songId);
     if (!song) {
       throw new NotFoundError("Música não encontrada.");
     }
+    if (song.artistId !== input.artistId) {
+      this.logger.warn(`Tentativa de alterar música de outro artista`, {
+        songId: input.songId, attemptedBy: input.artistId
+      });
+      throw new UnauthorizedError("Você não tem permissão para alterar esta música.");
+    }
 
-    song.setAvailability(isAvailable);
+    song.setAvailability(input.isAvailable);
     await this.songRepository.save(song);
-    this.logger.info(`Disponibilidade da música ${song.title} alterada para: ${isAvailable}`);
+    this.logger.info(`Disponibilidade da música ${song.title} alterada para: ${input.isAvailable}`);
   }
 }

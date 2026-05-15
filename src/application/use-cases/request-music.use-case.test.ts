@@ -4,12 +4,12 @@ import { MusicRequest } from "../../core/entities/music-request.entity";
 import { Show } from "../../core/entities/show.entity";
 import { Song } from "../../core/entities/song.entity";
 import { ShowDuration } from "../../core/value-objects/show-duration.vo";
-import { Money } from "../../core/value-objects/money.vo";
+import { BasicProfanityFilter } from "../../infra/security/basic-profanity-filter";
 
 class MockRequestRepo {
   private requests: MusicRequest[] = [];
   async save(req: MusicRequest) { this.requests.push(req); }
-  async countFreeRequestsByCustomer(showId: string, sid: string) {
+  async countFreeRequestsByCustomer(showId: string, _sid: string) {
     return this.requests.filter(r => r.showId === showId && r.tip.amountInCents === 0).length;
   }
   async findByShowId() { return []; }
@@ -37,16 +37,20 @@ class MockSongRepo {
 }
 
 const mockLogger = { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} };
+const profanityFilter = new BasicProfanityFilter();
+
+const buildUseCase = (reqRepo?: MockRequestRepo) =>
+  new RequestMusicUseCase(
+    (reqRepo ?? new MockRequestRepo()) as any,
+    new MockShowRepo() as any,
+    new MockSongRepo() as any,
+    mockLogger as any,
+    profanityFilter
+  );
 
 describe("RequestMusic Use Case", () => {
   test("deve permitir o primeiro pedido gratuito (RN09)", async () => {
-    const useCase = new RequestMusicUseCase(
-      new MockRequestRepo() as any, 
-      new MockShowRepo() as any, 
-      new MockSongRepo() as any,
-      mockLogger as any
-    );
-
+    const useCase = buildUseCase();
     const req = await useCase.execute({
       showId: "show-1",
       songId: "song-1",
@@ -54,13 +58,12 @@ describe("RequestMusic Use Case", () => {
       customerSessionId: "session-123",
       tipAmountInCents: 0
     });
-
     expect(req.tip.amountInCents).toBe(0);
   });
 
   test("deve impedir o segundo pedido gratuito (RN09)", async () => {
     const requestRepo = new MockRequestRepo();
-    const useCase = new RequestMusicUseCase(requestRepo, new MockShowRepo(), new MockSongRepo(), mockLogger as any);
+    const useCase = buildUseCase(requestRepo);
 
     await useCase.execute({
       showId: "show-1",
@@ -81,7 +84,7 @@ describe("RequestMusic Use Case", () => {
 
   test("deve permitir o segundo pedido se houver gorjeta", async () => {
     const requestRepo = new MockRequestRepo();
-    const useCase = new RequestMusicUseCase(requestRepo, new MockShowRepo(), new MockSongRepo(), mockLogger as any);
+    const useCase = buildUseCase(requestRepo);
 
     await useCase.execute({
       showId: "show-1",
@@ -96,9 +99,23 @@ describe("RequestMusic Use Case", () => {
       songId: "song-2",
       customerName: "André",
       customerSessionId: "session-123",
-      tipAmountInCents: 1000 // R$ 10,00
+      tipAmountInCents: 1000
     });
 
     expect(secondReq.tip.amountInCents).toBe(1000);
+  });
+
+  test("deve censurar palavras ofensivas na mensagem (RN08)", async () => {
+    const useCase = buildUseCase();
+    const req = await useCase.execute({
+      showId: "show-1",
+      songId: "song-1",
+      customerName: "André",
+      customerSessionId: "session-rn08",
+      message: "toca essa merda aí",
+      tipAmountInCents: 500
+    });
+    expect(req.message).not.toContain("merda");
+    expect(req.message).toContain("*");
   });
 });

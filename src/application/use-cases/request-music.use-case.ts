@@ -4,63 +4,67 @@ import type { IMusicRequestRepository } from "../../core/ports/music-request.rep
 import type { IShowRepository } from "../../core/ports/show.repository";
 import type { ISongRepository } from "../../core/ports/song.repository";
 import type { ILogger } from "../../core/ports/logger.port";
+import type { IProfanityFilter } from "../../core/ports/profanity-filter.port";
 import { Money } from "../../core/value-objects/money.vo";
 
 export interface RequestMusicInput {
   showId: string;
   songId: string;
   customerName: string;
-  customerSessionId: string; // ID da sessão/browser para controle de RN09
+  customerSessionId: string;
   message?: string;
   tipAmountInCents: number;
 }
 
 /**
  * Caso de Uso: Solicitar uma música.
- * Aplica a regra RN09 (1 pedido gratuito por show).
+ * Aplica RN09 (1 pedido gratuito por sessão) e RN08 (moderação de mensagens).
  */
 export class RequestMusicUseCase {
   constructor(
     private requestRepository: IMusicRequestRepository,
     private showRepository: IShowRepository,
     private songRepository: ISongRepository,
-    private logger: ILogger
+    private logger: ILogger,
+    private profanityFilter: IProfanityFilter
   ) {}
 
   async execute(input: RequestMusicInput): Promise<MusicRequest> {
-    // 1. Validar Show
     const show = await this.showRepository.findById(input.showId);
     if (!show || show.status !== 'active' || show.isExpired()) {
       throw new BusinessRuleError("Este show não está aceitando pedidos no momento.");
     }
 
-    // 2. Validar Música
     const song = await this.songRepository.findById(input.songId);
     if (!song || !song.isAvailable) {
       throw new NotFoundError("Música indisponível no momento.");
     }
 
-    // 3. RN09 - Validar Pedido Gratuito
+    if (song.artistId !== show.artistId) {
+      throw new BusinessRuleError("Esta música não pertence ao repertório do artista deste show.");
+    }
+
     const tip = new Money(input.tipAmountInCents);
     if (tip.amountInCents === 0) {
       const freeRequestsCount = await this.requestRepository.countFreeRequestsByCustomer(
-        input.showId, 
+        input.showId,
         input.customerSessionId
       );
-      
+
       if (freeRequestsCount >= 1) {
         throw new BusinessRuleError("Você já utilizou seu pedido gratuito para este show (RN09). Adicione uma gorjeta para pedir mais!");
       }
     }
 
-    // 4. Criar Pedido
+    const sanitizedMessage = input.message ? this.profanityFilter.clean(input.message) : null;
+
     const request = new MusicRequest(
       crypto.randomUUID(),
       input.showId,
       input.songId,
       input.customerName,
       input.customerSessionId,
-      input.message ?? null,
+      sanitizedMessage,
       tip,
       'pending'
     );

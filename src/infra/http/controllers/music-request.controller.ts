@@ -5,24 +5,48 @@ import { GetShowRequestsUseCase } from "../../../application/use-cases/get-show-
 import { CancelMusicRequestUseCase } from "../../../application/use-cases/cancel-request.use-case";
 import { MarkSongAsPlayedUseCase } from "../../../application/use-cases/mark-song-as-played.use-case";
 
+const COOKIE_NAME = "customer_sid";
+const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
+
 export const musicRequestController = (
   requestMusicUseCase: RequestMusicUseCase,
   getShowRequestsUseCase: GetShowRequestsUseCase,
   cancelMusicRequestUseCase: CancelMusicRequestUseCase,
   markSongAsPlayedUseCase: MarkSongAsPlayedUseCase
 ) =>
-  new Elysia({ prefix: "/shows" })
+  new Elysia({
+    prefix: "/shows",
+    cookie: {
+      secrets: process.env.COOKIE_SECRET!,
+      sign: [COOKIE_NAME]
+    }
+  })
 
     /**
-     * Realizar um pedido de música — rota pública (RN09 / Fricção Zero)
-     * O público acessa via QR Code sem precisar de login.
+     * Realizar um pedido de música — rota pública (RN09 / Fricção Zero).
+     * A identidade da sessão é emitida pelo servidor via cookie HttpOnly assinado,
+     * impedindo que o cliente forje sessões para burlar o limite de pedidos grátis.
      */
-    .post("/:showId/requests", async ({ params, body }) => {
+    .post("/:showId/requests", async ({ params, body, cookie: { customer_sid } }) => {
+      let sid = customer_sid.value;
+
+      if (!sid) {
+        sid = crypto.randomUUID();
+        customer_sid.set({
+          value: sid,
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: ONE_YEAR_SECONDS,
+          path: '/'
+        });
+      }
+
       const request = await requestMusicUseCase.execute({
         showId: params.showId,
         songId: body.songId,
         customerName: body.customerName,
-        customerSessionId: body.customerSessionId,
+        customerSessionId: sid,
         message: body.message,
         tipAmountInCents: body.tipAmountInCents,
       });
@@ -40,10 +64,12 @@ export const musicRequestController = (
       }),
       body: t.Object({
         songId: t.String({ format: "uuid" }),
-        customerName: t.String({ minLength: 1 }),
-        customerSessionId: t.String({ minLength: 1 }),
-        message: t.Optional(t.String()),
-        tipAmountInCents: t.Integer({ minimum: 0 }),
+        customerName: t.String({ minLength: 1, maxLength: 60 }),
+        message: t.Optional(t.String({ maxLength: 280 })),
+        tipAmountInCents: t.Integer({ minimum: 0, maximum: 1_000_000 }),
+      }),
+      cookie: t.Cookie({
+        customer_sid: t.Optional(t.String())
       }),
       detail: {
         summary: "Realizar pedido de música (público)",
@@ -52,16 +78,13 @@ export const musicRequestController = (
     })
 
     /**
-     * Rotas protegidas — apenas o artista autenticado acessa
+     * Rotas protegidas — apenas o artista autenticado dono do show acessa.
      */
     .use(authMiddleware)
 
-    /**
-     * Listar pedidos do show para o painel do artista (RN02)
-     */
     .get("/:showId/requests", async ({ params, getArtistId }) => {
-      await getArtistId();
-      const requests = await getShowRequestsUseCase.execute(params.showId);
+      const artistId = await getArtistId();
+      const requests = await getShowRequestsUseCase.execute({ showId: params.showId, artistId });
 
       return requests.map(r => ({
         id: r.id,
@@ -82,12 +105,9 @@ export const musicRequestController = (
       }
     })
 
-    /**
-     * Marcar música como tocada — encerra todos os pedidos daquela música (RN03)
-     */
     .patch("/:showId/songs/:songId/play", async ({ params, getArtistId }) => {
-      await getArtistId();
-      await markSongAsPlayedUseCase.execute({ showId: params.showId, songId: params.songId });
+      const artistId = await getArtistId();
+      await markSongAsPlayedUseCase.execute({ showId: params.showId, songId: params.songId, artistId });
       return { message: "Música marcada como tocada" };
     }, {
       params: t.Object({
@@ -100,12 +120,9 @@ export const musicRequestController = (
       }
     })
 
-    /**
-     * Cancelar um pedido específico (RN05)
-     */
     .patch("/:showId/requests/:requestId/cancel", async ({ params, getArtistId }) => {
-      await getArtistId();
-      await cancelMusicRequestUseCase.execute(params.requestId);
+      const artistId = await getArtistId();
+      await cancelMusicRequestUseCase.execute({ requestId: params.requestId, artistId });
       return { message: "Pedido cancelado com sucesso" };
     }, {
       params: t.Object({

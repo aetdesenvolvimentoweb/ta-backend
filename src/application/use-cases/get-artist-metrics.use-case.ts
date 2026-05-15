@@ -4,51 +4,40 @@ import type { ILogger } from "../../core/ports/logger.port";
 import { Money } from "../../core/value-objects/money.vo";
 
 export interface ArtistMetrics {
-  totalEarned: number; // Em reais para exibição fácil
+  totalEarned: number;
   artistShare: number;
   appShare: number;
   totalRequestsPlayed: number;
+  appCommissionPercent: number;
 }
 
+const APP_COMMISSION_PERCENT = 0.15;
+
 /**
- * Caso de Uso: Obter métricas financeiras do artista (RN02).
+ * Caso de Uso: Métricas financeiras consolidadas do artista (RN02).
+ * Considera histórico completo de pedidos tocados em todos os shows.
  */
 export class GetArtistMetricsUseCase {
-  private APP_COMMISSION_PERCENT = 0.15; // 15% conforme estratégia
-
   constructor(
     private requestRepository: IMusicRequestRepository,
-    private showRepository: IShowRepository,
+    private _showRepository: IShowRepository,
     private logger: ILogger
   ) {}
 
   async execute(artistId: string): Promise<ArtistMetrics> {
-    // 1. Buscar todos os shows do artista para consolidar (ou apenas o ativo? 
-    // RN02 diz "métrica para o artista", vamos consolidar tudo que foi 'played')
-    
-    // Por enquanto, vamos simular a busca de todos os pedidos 'played' vinculados a este artista
-    // Em uma implementação real, o repositório faria esse JOIN/Filtro.
-    
-    // Para o Use Case, vamos assumir que o repositório nos devolve os pedidos de um show ou filtro
-    const activeShow = await this.showRepository.findActiveByArtistId(artistId);
-    if (!activeShow) {
-       return { totalEarned: 0, artistShare: 0, appShare: 0, totalRequestsPlayed: 0 };
-    }
+    const agg = await this.requestRepository.aggregateArtistMetrics(artistId);
 
-    const requests = await this.requestRepository.findByShowId(activeShow.id);
-    const playedRequests = requests.filter(r => r.status === 'played');
+    const appShareCents = Math.round(agg.totalEarnedCents * APP_COMMISSION_PERCENT);
+    const artistShareCents = agg.totalEarnedCents - appShareCents;
 
-    const totalCents = playedRequests.reduce((sum, req) => sum + req.tip.amountInCents, 0);
-    const totalMoney = new Money(totalCents);
-
-    const appShareCents = Math.round(totalCents * this.APP_COMMISSION_PERCENT);
-    const artistShareCents = totalCents - appShareCents;
+    this.logger.info("Métricas do artista calculadas", { artistId, played: agg.totalRequestsPlayed });
 
     return {
-      totalEarned: totalMoney.toReal(),
+      totalEarned: new Money(agg.totalEarnedCents).toReal(),
       artistShare: new Money(artistShareCents).toReal(),
       appShare: new Money(appShareCents).toReal(),
-      totalRequestsPlayed: playedRequests.length
+      totalRequestsPlayed: agg.totalRequestsPlayed,
+      appCommissionPercent: APP_COMMISSION_PERCENT,
     };
   }
 }

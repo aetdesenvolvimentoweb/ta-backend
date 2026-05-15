@@ -30,4 +30,22 @@ export interface IMusicRequestRepository {
    * Verifica quantos pedidos gratuitos um cliente já fez em um show (RN09).
    */
   countFreeRequestsByCustomer(showId: string, customerSessionId: string): Promise<number>;
+
+  /**
+   * Agrega métricas globais para o painel administrativo (RN02).
+   */
+  aggregateAppMetrics(): Promise<{
+    totalVolumeCents: number;
+    topSongsByRequestCount: { title: string; count: number }[];
+    topArtistsByRevenue: { name: string; revenueCents: number }[];
+  }>;
+
+  /**
+   * Agrega métricas financeiras consolidadas de um artista (RN02).
+   * Considera apenas pedidos com status 'played' em todos os shows do artista.
+   */
+  aggregateArtistMetrics(artistId: string): Promise<{
+    totalEarnedCents: number;
+    totalRequestsPlayed: number;
+  }>;
 }

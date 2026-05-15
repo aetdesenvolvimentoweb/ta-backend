@@ -6,12 +6,13 @@ import { AuthenticateArtistUseCase } from "../../../application/use-cases/authen
 export const artistController = (
   createArtistUseCase: CreateArtistUseCase,
   authenticateArtistUseCase: AuthenticateArtistUseCase
-) => 
+) =>
   new Elysia({ prefix: "/artists" })
     .use(
       jwt({
         name: 'jwt',
-        secret: process.env.JWT_SECRET!
+        secret: process.env.JWT_SECRET!,
+        exp: process.env.JWT_EXPIRES_IN ?? '7d'
       })
     )
     /**

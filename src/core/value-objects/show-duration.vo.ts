@@ -7,11 +7,11 @@ import { BusinessRuleError } from "../errors/app-error";
 export class ShowDuration {
   /**
    * @param {number} hours - Duração em horas.
-   * @throws BusinessRuleError se estiver fora do range [4, 24].
+   * @throws BusinessRuleError se estiver fora do range [1, 24].
    */
   constructor(public readonly hours: number) {
-    if (hours < 4 || hours > 24) {
-      throw new BusinessRuleError("A duração do show deve ser entre 4 e 24 horas (RN01).");
+    if (!Number.isInteger(hours) || hours < 1 || hours > 24) {
+      throw new BusinessRuleError("A duração do show deve ser um inteiro entre 1 e 24 horas (RN01).");
     }
   }
 

@@ -19,7 +19,7 @@ O **Toque Aquela** é uma plataforma que moderniza a interação entre o públic
 ### 1. Artista
 - **Repertório:** Cadastro de músicas (Nome, Artista Original, Estilo).
 - **Gestão de Shows:**
-    - Criar show com duração limitada (Duração definida na criação: default 4h, máx 24h).
+    - Criar show com duração limitada (Duração inteira em horas; mín 1h, default 4h, máx 24h).
     - Regra: Apenas um show ativo por vez. Criar novo show encerra o anterior automaticamente.
 - **Painel de Pedidos:**
     - Visualização ordenada por: **Maior Valor Doado** + **Ordem de Chegada**.
@@ -71,14 +71,16 @@ O **Toque Aquela** é uma plataforma que moderniza a interação entre o públic
 - **RN13 (Acesso Público):** Modelo "Fricção Zero". Sem necessidade de login; identificação via sessão para controle de pedidos gratuitos e interação no show.
 
 ## Arquitetura (Implementada & Validada)
-- **Runtime:** Bun
-- **Linguagem:** TypeScript (Strict Mode, `verbatimModuleSyntax`, 0 erros em `bun tsc --noEmit`)
+- **Runtime:** Bun.
+- **Linguagem:** TypeScript (Strict Mode, `verbatimModuleSyntax`, 0 erros em `bun tsc --noEmit`).
 - **Estilo:** Limpa/Hexagonal, CQRS, OWASP.
-- **Framework:** ElysiaJS 1.4.28 (Backend) + Vite/React (Frontend — pendente).
+- **Framework:** ElysiaJS 1.4 (Backend) + Vite/React (Frontend — pendente).
 - **Banco de Dados:** PostgreSQL + Drizzle ORM (schema + migrations configurados).
-- **Autenticação:** JWT Bearer via `@elysiajs/jwt` — artistas autenticados via token.
+- **Autenticação:** JWT Bearer (`@elysiajs/jwt`) com `expiresIn` configurável + bootstrap-check de secret. Admin: JWT + whitelist de e-mails (`ADMIN_WHITELIST` via env; tabela Postgres planejada para RN12 final).
+- **Identidade pública:** cookie HttpOnly assinado `customer_sid` para impedir bypass do RN09.
+- **Endurecimento:** CORS, Security Headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, HSTS em prod), Rate Limit in-memory por IP, Profanity Filter PT-BR (RN08).
 - **Documentação:** Swagger/OpenAPI ativa em `/docs`.
-- **Testes:** Bun Test — 44 testes, 16 arquivos, 99.71% cobertura de linhas.
+- **Testes:** Bun Test — 58 testes unitários, 18 arquivos, 0 falhas. Integration tests separados (`*.integration.test.ts`).
 - **Deploy:** Render.com via Docker (pendente).
 
 ## Financeiro

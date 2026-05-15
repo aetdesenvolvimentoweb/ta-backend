@@ -6,38 +6,48 @@ import { Money } from "../../core/value-objects/money.vo";
 
 export interface AppMetrics {
   totalAppRevenue: number;
+  totalArtistsRevenue: number;
   totalVolumeTransacted: number;
-  topSongsByRequestCount: { title: string, count: number }[];
-  topArtistsByRevenue: { name: string, revenue: number }[];
+  appCommissionPercent: number;
+  topSongsByRequestCount: { title: string; count: number }[];
+  topArtistsByRevenue: { name: string; revenue: number }[];
 }
 
+const APP_COMMISSION_PERCENT = 0.15;
+
 /**
- * Caso de Uso: Obter métricas globais do sistema (Painel Admin).
+ * Caso de Uso: Métricas globais do sistema (Painel Admin / RN02).
+ * Agregação delegada ao repositório (SQL).
  */
 export class GetAppMetricsUseCase {
-  private APP_COMMISSION_PERCENT = 0.15;
-
   constructor(
     private requestRepository: IMusicRequestRepository,
-    private artistRepository: IArtistRepository,
-    private songRepository: ISongRepository,
+    private _artistRepository: IArtistRepository,
+    private _songRepository: ISongRepository,
     private logger: ILogger
   ) {}
 
-  /**
-   * Este método consolidaria dados de todos os shows.
-   * Em produção, isso seria uma query otimizada no banco.
-   */
   async execute(): Promise<AppMetrics> {
-    // Para o domínio, vamos definir a lógica de como esses dados são processados
-    // No mundo real, pediríamos ao repositório um sumário consolidado para performance.
-    
-    // Por enquanto, vamos simular a lógica de agregação que o repositório deve seguir
+    const agg = await this.requestRepository.aggregateAppMetrics();
+    const appCents = Math.round(agg.totalVolumeCents * APP_COMMISSION_PERCENT);
+    const artistsCents = agg.totalVolumeCents - appCents;
+
+    this.logger.info("Métricas globais calculadas", {
+      totalVolumeCents: agg.totalVolumeCents,
+      uniqueSongs: agg.topSongsByRequestCount.length,
+      uniqueArtists: agg.topArtistsByRevenue.length,
+    });
+
     return {
-      totalAppRevenue: 0, // 15% do volume total
-      totalVolumeTransacted: 0,
-      topSongsByRequestCount: [],
-      topArtistsByRevenue: []
+      totalAppRevenue: new Money(appCents).toReal(),
+      totalArtistsRevenue: new Money(artistsCents).toReal(),
+      totalVolumeTransacted: new Money(agg.totalVolumeCents).toReal(),
+      appCommissionPercent: APP_COMMISSION_PERCENT,
+      topSongsByRequestCount: agg.topSongsByRequestCount,
+      topArtistsByRevenue: agg.topArtistsByRevenue.map(a => ({
+        name: a.name,
+        revenue: new Money(a.revenueCents).toReal(),
+      })),
     };
   }
 }

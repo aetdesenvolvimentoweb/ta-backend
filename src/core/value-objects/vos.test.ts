@@ -27,7 +27,12 @@ describe("ShowDuration Value Object", () => {
   });
 
   test("deve rejeitar durações fora do range (RN01)", () => {
-    expect(() => new ShowDuration(3)).toThrow("entre 4 e 24 horas");
-    expect(() => new ShowDuration(25)).toThrow("entre 4 e 24 horas");
+    expect(() => new ShowDuration(0)).toThrow("entre 1 e 24 horas");
+    expect(() => new ShowDuration(25)).toThrow("entre 1 e 24 horas");
+    expect(() => new ShowDuration(2.5)).toThrow("entre 1 e 24 horas");
+  });
+
+  test("deve aceitar 1h como mínimo", () => {
+    expect(new ShowDuration(1).hours).toBe(1);
   });
 });

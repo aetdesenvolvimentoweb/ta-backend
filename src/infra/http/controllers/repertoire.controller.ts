@@ -61,8 +61,8 @@ export const repertoireController = (
      * Alternar disponibilidade de uma música (RN05)
      */
     .patch("/:id/availability", async ({ params, body, getArtistId }) => {
-      await getArtistId();
-      await toggleAvailabilityUseCase.execute(params.id, body.isAvailable);
+      const artistId = await getArtistId();
+      await toggleAvailabilityUseCase.execute({ songId: params.id, isAvailable: body.isAvailable, artistId });
       return { message: "Disponibilidade atualizada com sucesso" };
     }, {
       params: t.Object({

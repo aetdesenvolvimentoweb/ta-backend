@@ -29,7 +29,7 @@ export const showController = (
       };
     }, {
       body: t.Object({
-        durationHours: t.Number({ minimum: 1, maximum: 24 })
+        durationHours: t.Integer({ minimum: 1, maximum: 24 })
       }),
       detail: {
         summary: "Iniciar um novo show",
@@ -41,10 +41,8 @@ export const showController = (
      * Finalizar um show
      */
     .post("/:id/finish", async ({ params, getArtistId }) => {
-      await getArtistId(); // Garante que está autenticado
-      
-      // TODO: Validar se o artista autenticado é o dono do show
-      await finishShowUseCase.execute(params.id);
+      const artistId = await getArtistId();
+      await finishShowUseCase.execute({ showId: params.id, artistId });
       return { message: "Show finalizado com sucesso" };
     }, {
       params: t.Object({

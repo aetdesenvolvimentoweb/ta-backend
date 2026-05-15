@@ -1,6 +1,7 @@
 import { expect, test, describe } from "bun:test";
 import { AddSongUseCase, GetRepertoireUseCase, ToggleSongAvailabilityUseCase } from "./manage-repertoire.use-case";
 import { Song } from "../../core/entities/song.entity";
+import { UnauthorizedError } from "../../core/errors/app-error";
 
 class MockSongRepo {
   private songs: Song[] = [];
@@ -57,7 +58,7 @@ describe("Manage Repertoire Use Cases", () => {
     expect(songs.every(s => s.artistId === "artist-1")).toBe(true);
   });
 
-  test("deve alternar disponibilidade da música", async () => {
+  test("deve alternar disponibilidade da música quando é do próprio artista", async () => {
     const songRepo = new MockSongRepo();
     const useCase = new AddSongUseCase(songRepo as any, new MockStyleRepo() as any, mockLogger as any);
     const toggle = new ToggleSongAvailabilityUseCase(songRepo as any, mockLogger as any);
@@ -69,9 +70,26 @@ describe("Manage Repertoire Use Cases", () => {
       styleName: "Rock"
     });
 
-    await toggle.execute(song.id, false);
-    
+    await toggle.execute({ songId: song.id, isAvailable: false, artistId: "artist-1" });
+
     const updated = await songRepo.findById(song.id);
     expect(updated?.isAvailable).toBe(false);
+  });
+
+  test("deve rejeitar toggle de música de outro artista", async () => {
+    const songRepo = new MockSongRepo();
+    const add = new AddSongUseCase(songRepo as any, new MockStyleRepo() as any, mockLogger as any);
+    const toggle = new ToggleSongAvailabilityUseCase(songRepo as any, mockLogger as any);
+
+    const song = await add.execute({
+      artistId: "artist-1",
+      title: "Música X",
+      originalArtist: "Artista Y",
+      styleName: "Rock"
+    });
+
+    await expect(
+      toggle.execute({ songId: song.id, isAvailable: false, artistId: "artist-2" })
+    ).rejects.toThrow(UnauthorizedError);
   });
 });
