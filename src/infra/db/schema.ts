@@ -10,14 +10,26 @@ export const styles = pgTable("styles", {
 
 /**
  * Tabela de Artistas
+ *
+ * Campos `payment*` (RN14/RN15/RN17):
+ *  - `paymentGateway` + `paymentExternalAccountId` identificam a conta conectada (collector).
+ *  - `paymentAccessTokenEnc` / `paymentRefreshTokenEnc` armazenam tokens OAuth criptografados em repouso.
+ *  - Nenhum dado fiscal (CPF, conta bancária, PIX) é armazenado — RN17.
  */
 export const artists = pgTable("artists", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  passwordHash: text("password_hash"), // Adicionado para futura autenticação real
+  passwordHash: text("password_hash"),
   isPremium: boolean("is_premium").default(false).notNull(),
   socials: jsonb("socials").$type<Record<string, string>>().default({}).notNull(),
+
+  paymentGateway: text("payment_gateway").$type<'mercado_pago' | 'stripe' | 'pagarme'>(),
+  paymentExternalAccountId: text("payment_external_account_id"),
+  paymentAccessTokenEnc: text("payment_access_token_enc"),
+  paymentRefreshTokenEnc: text("payment_refresh_token_enc"),
+  paymentTokenExpiresAt: timestamp("payment_token_expires_at", { withTimezone: true }),
+  paymentConnectedAt: timestamp("payment_connected_at", { withTimezone: true }),
 });
 
 /**
@@ -45,15 +57,24 @@ export const songs = pgTable("songs", {
 
 /**
  * Tabela de Pedidos de Música
+ *
+ * Campos `payment*` (RN16/RN18):
+ *  - Só preenchidos quando `tipAmountCents > 0`.
+ *  - `paymentId` é o identificador devolvido pelo gateway; `paymentGateway` identifica qual adapter o emitiu.
+ *  - `paymentStatus` espelha o status no gateway (atualizado por webhook).
  */
 export const musicRequests = pgTable("music_requests", {
   id: uuid("id").primaryKey().defaultRandom(),
   showId: uuid("show_id").references(() => shows.id).notNull(),
   songId: uuid("song_id").references(() => songs.id).notNull(),
   customerName: text("customer_name").notNull(),
-  customerSessionId: text("customer_session_id"), // Para RN09
+  customerSessionId: text("customer_session_id"),
   message: text("message"),
   tipAmountCents: integer("tip_amount_cents").default(0).notNull(),
   status: text("status").$type<'pending' | 'played' | 'cancelled' | 'refunded'>().default('pending').notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+
+  paymentGateway: text("payment_gateway").$type<'mercado_pago' | 'stripe' | 'pagarme'>(),
+  paymentId: text("payment_id"),
+  paymentStatus: text("payment_status").$type<'pending' | 'approved' | 'rejected' | 'refunded'>(),
 });

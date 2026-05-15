@@ -21,12 +21,15 @@ O **Toque Aquela** é uma plataforma que moderniza a interação entre o públic
 - **Gestão de Shows:**
     - Criar show com duração limitada (Duração inteira em horas; mín 1h, default 4h, máx 24h).
     - Regra: Apenas um show ativo por vez. Criar novo show encerra o anterior automaticamente.
+    - **Ao criar show**, o artista é convidado (não obrigado) a conectar uma conta de pagamento para habilitar gorjetas (RN15).
 - **Painel de Pedidos:**
     - Visualização ordenada por: **Maior Valor Doado** + **Ordem de Chegada**.
     - Agrupamento automático de pedidos para a mesma música.
     - Ação: Marcar música como "tocada" (remove da lista).
 - **Financeiro:**
     - Cadastro gratuito com comissão sobre gorjetas.
+    - **Conta de pagamento opcional** (Mercado Pago no MVP, arquitetura pronta para Stripe/Pagar.me). Sem conexão, o show funciona apenas com pedidos gratuitos (RN15/RN16).
+    - Sem armazenamento de CPF, conta bancária ou chave PIX — KYC delegado integralmente ao gateway (RN17).
     - Futuro: Planos de assinatura para reduzir/zerar comissão.
 - **Perfil:** Cadastro de redes sociais.
 
@@ -62,13 +65,20 @@ O **Toque Aquela** é uma plataforma que moderniza a interação entre o públic
 - **RN09 (Pedidos Gratuitos):** Cada membro do público tem direito a apenas **1 pedido gratuito por show**. Pedidos subsequentes exigem gorjeta mínima.
 
 ### Financeiro e Segurança
-- **RN06 (Termos de Uso):** As gorjetas são tratadas como apoio ao artista. Regras detalhadas serão elaboradas nos termos de uso.
+- **RN06 (Termos de Uso):** As gorjetas são tratadas como **liberalidade do fã ao artista**; a plataforma apenas facilita o repasse via gateway com split nativo. O dinheiro nunca passa pela conta da plataforma — apenas a comissão (15%) é direcionada a ela na própria transação. Esse enquadramento jurídico/tributário é o que sustenta o tratamento de "gorjeta" e evita inflação artificial de faturamento.
 - **RN07 (Taxas):** As taxas do gateway de pagamento são descontadas do valor bruto antes da divisão entre Artista e App.
 - **RN08 (Moderação):** Filtro automático de palavras ofensivas nas dedicatórias/mensagens.
 - **RN10 (Integridade de Estilos):** A alteração de um estilo pelo Admin reflete automaticamente em todas as músicas associadas.
 - **RN11 (Autenticação Artista):** Suporte a E-mail/Senha e OAuth (Google/Apple), garantindo compatibilidade com iOS e Android (PWA).
 - **RN12 (Segurança Admin):** Acesso restrito via Whitelist de e-mails + Login obrigatório via OAuth (Google) para máxima segurança.
 - **RN13 (Acesso Público):** Modelo "Fricção Zero". Sem necessidade de login; identificação via sessão para controle de pedidos gratuitos e interação no show.
+
+### Pagamentos (Multi-gateway, opt-in)
+- **RN14 (Multi-gateway):** A plataforma suporta múltiplos gateways de pagamento via um Port único (`IPaymentGateway`). O MVP entrega **Mercado Pago** (já há familiaridade do operador, PIX nativo, OAuth simples para o artista). Stripe Connect e Pagar.me podem ser adicionados sem mudança no domínio/aplicação — apenas novos adapters.
+- **RN15 (Cadastro Opt-in):** A conexão de conta de pagamento é **opcional** no cadastro do artista. Sem conta conectada, o artista pode usar todo o app (repertório, show, pedidos gratuitos). Apenas gorjetas exigem a conexão prévia. O CTA principal de conexão aparece **ao criar o primeiro show**, mas também é acessível no perfil.
+- **RN16 (Split Nativo Obrigatório):** Toda transação de gorjeta é dividida **na própria transação pelo gateway** (85% artista / 15% plataforma). A plataforma **nunca custodia valores de terceiros** — isso evita enquadramento como Instituição de Pagamento (Lei 12.865/2013), retenção na fonte sobre repasses, e inflação tributária sobre o bruto.
+- **RN17 (Mínimo de Dados Sensíveis):** A plataforma **não armazena CPF, conta bancária ou chave PIX** do artista. O gateway é o único responsável pela identidade financeira e KYC. A plataforma guarda apenas os tokens OAuth (criptografados em repouso) e o `accountId` externo necessários para roteamento do split.
+- **RN18 (Estorno via Gateway):** Em caso de música não tocada ou desativada (RN05), o estorno é executado via API do gateway, revertendo automaticamente o split. O status do pedido transita para `refunded`.
 
 ## Arquitetura (Implementada & Validada)
 - **Runtime:** Bun.
@@ -77,6 +87,7 @@ O **Toque Aquela** é uma plataforma que moderniza a interação entre o públic
 - **Framework:** ElysiaJS 1.4 (Backend) + Vite/React (Frontend — pendente).
 - **Banco de Dados:** PostgreSQL + Drizzle ORM (schema + migrations configurados).
 - **Autenticação:** JWT Bearer (`@elysiajs/jwt`) com `expiresIn` configurável + bootstrap-check de secret. Admin: JWT + whitelist de e-mails (`ADMIN_WHITELIST` via env; tabela Postgres planejada para RN12 final).
+- **Pagamentos:** Port `IPaymentGateway` (agnóstico); adapter inicial `MercadoPagoGateway` (pendente — fluxo OAuth Connect + split nativo). Domínio expõe `Artist.paymentAccount?` e `MusicRequest.payment` (paymentId, gateway, status). Tokens OAuth criptografados em repouso (KMS/env-key).
 - **Identidade pública:** cookie HttpOnly assinado `customer_sid` para impedir bypass do RN09.
 - **Endurecimento:** CORS, Security Headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, HSTS em prod), Rate Limit in-memory por IP, Profanity Filter PT-BR (RN08).
 - **Documentação:** Swagger/OpenAPI ativa em `/docs`.
@@ -85,5 +96,6 @@ O **Toque Aquela** é uma plataforma que moderniza a interação entre o públic
 
 ## Financeiro
 - **Comissão Padrão:** 15% sobre o valor bruto das gorjetas.
-- **Divisão:** Artista (85%) / Plataforma (15%).
+- **Divisão:** Artista (85%) / Plataforma (15%) — aplicada via **split nativo** do gateway na própria transação (RN16).
 - **Taxas:** Descontadas do valor bruto antes da divisão (RN07).
+- **Custódia:** A plataforma **não custodia valores de terceiros** — apenas a comissão (15%) é direcionada à sua conta na transação. Isso preserva o enquadramento jurídico de "gorjeta/liberalidade" (RN06) e evita inflação tributária.

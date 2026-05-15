@@ -1,6 +1,7 @@
 import { expect, test, describe } from "bun:test";
 import { Money } from "./money.vo";
 import { ShowDuration } from "./show-duration.vo";
+import { PaymentAccount, isSupportedGateway } from "./payment-account.vo";
 
 describe("Money Value Object", () => {
   test("deve converter centavos para real corretamente", () => {
@@ -34,5 +35,29 @@ describe("ShowDuration Value Object", () => {
 
   test("deve aceitar 1h como mínimo", () => {
     expect(new ShowDuration(1).hours).toBe(1);
+  });
+});
+
+describe("PaymentAccount Value Object", () => {
+  test("deve criar uma conta válida e fazer trim do externalAccountId", () => {
+    const account = new PaymentAccount('mercado_pago', '  mp-collector-123  ');
+    expect(account.gateway).toBe('mercado_pago');
+    expect(account.externalAccountId).toBe('mp-collector-123');
+    expect(account.connectedAt).toBeInstanceOf(Date);
+  });
+
+  test("deve rejeitar gateway não suportado (RN14)", () => {
+    expect(() => new PaymentAccount('paypal' as any, 'id')).toThrow("não suportado");
+  });
+
+  test("deve rejeitar externalAccountId vazio (RN17 — identidade externa obrigatória)", () => {
+    expect(() => new PaymentAccount('mercado_pago', '   ')).toThrow("obrigatório");
+  });
+
+  test("isSupportedGateway: deve aceitar gateways conhecidos", () => {
+    expect(isSupportedGateway('mercado_pago')).toBe(true);
+    expect(isSupportedGateway('stripe')).toBe(true);
+    expect(isSupportedGateway('pagarme')).toBe(true);
+    expect(isSupportedGateway('paypal')).toBe(false);
   });
 });

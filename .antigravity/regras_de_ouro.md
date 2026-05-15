@@ -25,3 +25,11 @@
 16. **Drizzle**: o schema do banco reflete fielmente as entidades de domínio.
 17. **Ambientes isolados**: nunca usar credenciais de produção em desenvolvimento. `.env`, `.env.test`, `.env.example`.
 18. **Imports**: `import type` para todos os imports de tipo (`verbatimModuleSyntax`).
+
+## Pagamentos
+19. **Multi-gateway por design (RN14)**: toda lógica de pagamento depende **apenas do Port `IPaymentGateway`**. Nenhum use case importa SDKs de gateway, IDs proprietários ou enums específicos (`mercadopago`, `stripe`...). Adicionar um novo gateway = novo adapter + entrada no registry, zero mudança em `core/application`.
+20. **Split nativo obrigatório (RN16)**: a plataforma **nunca custodia valor de terceiros**. Toda transação de gorjeta sai do gateway já dividida (85/15). Modelos "conta-única com repasse manual" estão proibidos — comprometem o enquadramento jurídico de gorjeta/liberalidade (RN06) e disparam riscos tributários e regulatórios (BACEN/COAF).
+21. **Mínimo de dados financeiros (RN17)**: NÃO persistir CPF, conta bancária, chave PIX ou qualquer dado fiscal do artista. O gateway é o source-of-truth de identidade financeira. A plataforma guarda **apenas** o `externalAccountId` e tokens OAuth (criptografados em repouso). Se um dia uma tela precisar do dado, busca no gateway via API — não duplica.
+22. **Tokens OAuth criptografados em repouso**: `accessToken`/`refreshToken` de gateway nunca são gravados em plain text. Camada de criptografia simétrica (AES-GCM) com chave em env (`PAYMENT_TOKEN_KEY`). Adapter expõe métodos para encrypt/decrypt; repositório nunca vê plain text.
+23. **Idempotência em webhooks de pagamento**: todo handler de webhook é idempotente (uso de `paymentId` + `eventId` para deduplicação). Webhooks são fonte autoritativa do `paymentStatus` — não confiar no callback síncrono do cliente.
+24. **Habilitar tip exige conta conectada (RN15)**: `RequestMusicUseCase` recusa `tipAmountInCents > 0` quando `artist.canReceiveTips()` é false. Pedido gratuito (`tipAmountInCents === 0`) continua aceito mesmo sem conta — o app funciona sem pagamento.

@@ -3,6 +3,7 @@ import { Artist } from "./artist.entity";
 import { MusicRequest } from "./music-request.entity";
 import { Email } from "../value-objects/email.vo";
 import { Money } from "../value-objects/money.vo";
+import { PaymentAccount } from "../value-objects/payment-account.vo";
 import { BusinessRuleError, NotFoundError, UnauthorizedError } from "../errors/app-error";
 
 describe("Domain Coverage (Edge Cases)", () => {
@@ -18,12 +19,33 @@ describe("Domain Coverage (Edge Cases)", () => {
 
   test("MusicRequest: deve alterar status via métodos da entidade", () => {
     const request = new MusicRequest("1", "show-1", "song-1", "André");
-    
+
     request.markAsPlayed();
     expect(request.status).toBe('played');
 
     request.cancel();
     expect(request.status).toBe('cancelled');
+  });
+
+  test("MusicRequest: attachPayment + markPaymentStatus refunded propaga para status do pedido (RN18)", () => {
+    const request = new MusicRequest("1", "show-1", "song-1", "André");
+    request.attachPayment({ gateway: 'mercado_pago', paymentId: 'mp-1', status: 'approved' });
+    expect(request.payment?.status).toBe('approved');
+
+    request.markPaymentStatus('refunded');
+    expect(request.payment?.status).toBe('refunded');
+    expect(request.status).toBe('refunded');
+  });
+
+  test("Artist: canReceiveTips reflete conexão de conta (RN15)", () => {
+    const artist = new Artist("1", "João", new Email("joao@teste.com"));
+    expect(artist.canReceiveTips()).toBe(false);
+
+    artist.connectPaymentAccount(new PaymentAccount('mercado_pago', 'mp-1'));
+    expect(artist.canReceiveTips()).toBe(true);
+
+    artist.disconnectPaymentAccount();
+    expect(artist.canReceiveTips()).toBe(false);
   });
 
   test("Money: deve subtrair valores e validar inteiros", () => {

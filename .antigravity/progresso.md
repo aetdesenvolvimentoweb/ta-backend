@@ -1,16 +1,17 @@
 # Progresso do Projeto - Toque Aquela
 
 ## Última Atualização: 2026-05-15
-**Status Atual**: Backend funcionalmente completo (HTTP + Admin + Métricas) e endurecido (OWASP). Pronto para frontend e integração de pagamentos.
+**Status Atual**: Backend funcionalmente completo (HTTP + Admin + Métricas) e endurecido (OWASP). Domínio preparado para pagamentos multi-gateway (Port + entidades estendidas). Adapter Mercado Pago e fluxo OAuth pendentes — próxima entrega.
 
 ---
 
 ### Concluído ✅
 
 #### Core / Domain
-- Entidades: `Artist`, `Show`, `Song`, `MusicRequest` — 100% testadas.
-- Value Objects: `Email`, `Money`, `ShowDuration` (range 1–24h inteiras) — 100% testados.
+- Entidades: `Artist` (com `paymentAccount?` opt-in), `Show`, `Song`, `MusicRequest` (com bloco `payment?` para gateway/paymentId/status) — 100% testadas.
+- Value Objects: `Email`, `Money`, `ShowDuration` (range 1–24h inteiras), `PaymentAccount` (gateway + externalAccountId + connectedAt) — 100% testados.
 - Erros Customizados: `AppError`, `BusinessRuleError`, `NotFoundError`, `UnauthorizedError`.
+- Ports de pagamento: `IPaymentGateway` (agnóstico, contratos para OAuth + criação/estorno de tip).
 
 #### Application (Use Cases)
 17 Use Cases com `ILogger` + injeção de dependência. **Autorização (ownership) embutida** nos use cases que tocam recursos por ID:
@@ -56,15 +57,22 @@
 
 ### Em Aberto / Próximos Passos 🚀
 
-1. **Frontend (Vite + React)**
+1. **Pagamentos — Adapter Mercado Pago (Decisão tomada: MP no MVP)**
+   - **Decisão**: MP como gateway inicial via **split nativo** (RN16), com domínio multi-gateway (RN14).
+   - **Domínio já preparado**: `IPaymentGateway` port, `PaymentAccount` VO, `Artist.paymentAccount?`, `MusicRequest.payment` (paymentId/gateway/status) já existem e estão testados.
+   - **Pendente**:
+     - Adapter `MercadoPagoGateway` (SDK oficial + fluxo OAuth Connect).
+     - Use cases: `ConnectArtistPaymentAccountUseCase`, `DisconnectArtistPaymentAccountUseCase`, `CreateTipPaymentUseCase`, `RefundTipPaymentUseCase`.
+     - Controllers: `/v1/payment-accounts/*` (OAuth start/callback/disconnect) + `/v1/webhooks/mercado-pago`.
+     - Criptografia em repouso dos tokens OAuth (KEK via env, possivelmente migrar para KMS).
+     - Estorno (RN05/RN18) via API.
+
+2. **Frontend (Vite + React)**
    - Página pública (QR Code) — repertório + pedido (cookie de sessão).
    - Painel do artista (login, lista de pedidos em tempo real, mark-as-played).
+   - **Onboarding de pagamento** ao criar primeiro show (CTA "Conectar Mercado Pago" — RN15).
    - Gerenciamento de repertório.
    - Painel admin (whitelist + métricas globais).
-
-2. **Pagamentos**
-   - Decisão: Stripe Connect vs Pagar.me Split (PIX, BR).
-   - Integração de tip com cartão/PIX, webhook, estorno (RN05).
 
 3. **Autenticação Admin Completa (RN12)**
    - OAuth Google + tabela `admin_whitelist` em Postgres (substituir o repo env-backed sem tocar o use case).

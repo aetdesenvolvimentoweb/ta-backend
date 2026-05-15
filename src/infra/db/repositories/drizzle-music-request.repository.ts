@@ -3,13 +3,40 @@ import { db } from "../client";
 import { musicRequests, songs, shows, artists } from "../schema";
 import { MusicRequest } from "../../../core/entities/music-request.entity";
 import { Money } from "../../../core/value-objects/money.vo";
+import { isSupportedGateway } from "../../../core/value-objects/payment-account.vo";
 import type { IMusicRequestRepository } from "../../../core/ports/music-request.repository";
+import type { RequestPayment } from "../../../core/entities/music-request.entity";
+
+type MusicRequestRow = typeof musicRequests.$inferSelect;
+
+function rowToRequest(row: MusicRequestRow): MusicRequest {
+  let payment: RequestPayment | null = null;
+  if (row.paymentGateway && row.paymentId && row.paymentStatus && isSupportedGateway(row.paymentGateway)) {
+    payment = {
+      gateway: row.paymentGateway,
+      paymentId: row.paymentId,
+      status: row.paymentStatus,
+    };
+  }
+  return new MusicRequest(
+    row.id,
+    row.showId,
+    row.songId,
+    row.customerName,
+    row.customerSessionId,
+    row.message,
+    new Money(row.tipAmountCents),
+    row.status,
+    row.createdAt,
+    payment
+  );
+}
 
 /**
  * Implementação do repositório de Pedidos de Música usando Drizzle ORM.
  */
 export class DrizzleMusicRequestRepository implements IMusicRequestRepository {
-  
+
   async save(request: MusicRequest): Promise<void> {
     await db.insert(musicRequests).values({
       id: request.id,
@@ -21,48 +48,31 @@ export class DrizzleMusicRequestRepository implements IMusicRequestRepository {
       tipAmountCents: request.tip.amountInCents,
       status: request.status,
       createdAt: request.createdAt,
+      paymentGateway: request.payment?.gateway ?? null,
+      paymentId: request.payment?.paymentId ?? null,
+      paymentStatus: request.payment?.status ?? null,
     }).onConflictDoUpdate({
       target: musicRequests.id,
       set: {
         status: request.status,
-        tipAmountCents: request.tip.amountInCents
+        tipAmountCents: request.tip.amountInCents,
+        paymentGateway: request.payment?.gateway ?? null,
+        paymentId: request.payment?.paymentId ?? null,
+        paymentStatus: request.payment?.status ?? null,
       }
     });
   }
 
   async findById(id: string): Promise<MusicRequest | null> {
     const [row] = await db.select().from(musicRequests).where(eq(musicRequests.id, id));
-    if (!row) return null;
-
-    return new MusicRequest(
-      row.id,
-      row.showId,
-      row.songId,
-      row.customerName,
-      row.customerSessionId,
-      row.message,
-      new Money(row.tipAmountCents),
-      row.status,
-      row.createdAt
-    );
+    return row ? rowToRequest(row) : null;
   }
 
   async findByShowId(showId: string): Promise<MusicRequest[]> {
     const rows = await db.select().from(musicRequests)
       .where(eq(musicRequests.showId, showId))
       .orderBy(desc(musicRequests.tipAmountCents), musicRequests.createdAt);
-    
-    return rows.map(row => new MusicRequest(
-      row.id,
-      row.showId,
-      row.songId,
-      row.customerName,
-      row.customerSessionId,
-      row.message,
-      new Money(row.tipAmountCents),
-      row.status,
-      row.createdAt
-    ));
+    return rows.map(rowToRequest);
   }
 
   /**
@@ -76,18 +86,7 @@ export class DrizzleMusicRequestRepository implements IMusicRequestRepository {
           eq(musicRequests.customerSessionId, sessionId)
         )
       );
-    
-    return rows.map(row => new MusicRequest(
-      row.id,
-      row.showId,
-      row.songId,
-      row.customerName,
-      row.customerSessionId,
-      row.message,
-      new Money(row.tipAmountCents),
-      row.status,
-      row.createdAt
-    ));
+    return rows.map(rowToRequest);
   }
 
   async countFreeRequestsByCustomer(showId: string, customerSessionId: string): Promise<number> {
