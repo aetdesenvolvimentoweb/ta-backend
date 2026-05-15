@@ -5,11 +5,15 @@ export type TipPaymentStatus = 'pending' | 'approved' | 'rejected' | 'refunded';
 export interface OAuthAuthorizeUrlInput {
   state: string;
   redirectUri: string;
+  /** PKCE (RFC 7636) — adapters podem ignorar se o gateway não suportar. */
+  codeChallenge?: string;
 }
 
 export interface OAuthExchangeInput {
   code: string;
   redirectUri: string;
+  /** PKCE verifier correspondente ao `codeChallenge` enviado em `buildAuthorizeUrl`. */
+  codeVerifier?: string;
 }
 
 export interface OAuthCredentials {

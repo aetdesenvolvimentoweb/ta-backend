@@ -1,7 +1,7 @@
 # Progresso do Projeto - Toque Aquela
 
 ## Última Atualização: 2026-05-15
-**Status Atual**: Backend funcionalmente completo (HTTP + Admin + Métricas) e endurecido (OWASP). Domínio preparado para pagamentos multi-gateway (Port + entidades estendidas). Adapter Mercado Pago e fluxo OAuth pendentes — próxima entrega.
+**Status Atual**: Backend funcionalmente completo + endurecido (OWASP) + **Entrega A de Pagamentos concluída** (OAuth Connect com Mercado Pago, PKCE, tokens criptografados AES-GCM em repouso). Falta apenas Entrega B (cobrança PIX + estorno) para o backend financeiro estar 100%.
 
 ---
 
@@ -14,22 +14,29 @@
 - Ports de pagamento: `IPaymentGateway` (agnóstico, contratos para OAuth + criação/estorno de tip).
 
 #### Application (Use Cases)
-17 Use Cases com `ILogger` + injeção de dependência. **Autorização (ownership) embutida** nos use cases que tocam recursos por ID:
+20 Use Cases com `ILogger` + injeção de dependência. **Autorização (ownership) embutida** nos use cases que tocam recursos por ID:
 - `CreateArtistUseCase`, `AuthenticateArtistUseCase`
 - `StartShowUseCase`, `FinishShowUseCase` (valida `show.artistId === input.artistId`)
-- `RequestMusicUseCase` (RN09 + RN08: mensagens sanitizadas via `IProfanityFilter`; valida `song.artistId === show.artistId`)
+- `RequestMusicUseCase` (RN09 + RN08 + RN15: mensagens sanitizadas via `IProfanityFilter`; valida `song.artistId === show.artistId`; bloqueia tip > 0 quando `artist.canReceiveTips()` é false)
 - `CancelMusicRequestUseCase`, `MarkSongAsPlayedUseCase`, `GetShowRequestsUseCase` (todos validam ownership via `show.artistId`)
 - `AddSongUseCase`, `ToggleSongAvailabilityUseCase` (valida `song.artistId`), `GetRepertoireUseCase`
 - `CreateStyleUseCase`, `MergeStylesUseCase`
 - `ValidateAdminWhitelistUseCase`
 - `GetArtistMetricsUseCase`, `GetAppMetricsUseCase` — agregação real via SQL (não mais stubs).
+- **Pagamentos (Entrega A)**: `StartPaymentConnectionUseCase`, `CompletePaymentConnectionUseCase`, `DisconnectPaymentAccountUseCase` — fluxo OAuth Connect agnóstico de gateway via `IPaymentGatewayRegistry`.
 
 #### Infraestrutura
 - Drizzle ORM com PostgreSQL (schema + migrations).
-- Repositórios Drizzle: `Artist`, `Show`, `Song`, `Style`, `MusicRequest`, `AdminWhitelist` (env-backed, contrato preservado).
+- Repositórios Drizzle: `Artist` (com colunas de pagamento + tokens encriptados), `Show`, `Song`, `Style`, `MusicRequest` (com bloco payment), `AdminWhitelist` (env-backed), **`PaymentCredentials`** (port isolado, cifra/decifra tokens em trânsito).
 - `PinoLogger`, `BunPasswordHasher`.
-- **`infra/config/env.ts`**: fail-fast bootstrap — exige `DATABASE_URL`, `JWT_SECRET` (≥32c), `COOKIE_SECRET` (≥32c).
+- **`infra/config/env.ts`**: fail-fast bootstrap — exige `DATABASE_URL`, `JWT_SECRET` (≥32c), `COOKIE_SECRET` (≥32c), **`PAYMENT_TOKEN_KEY`** (hex 64 chars).
 - **`BasicProfanityFilter`** (PT-BR, stems + normalização sem acentos) — testado.
+- **Pagamentos (Entrega A)**:
+  - `AesGcmTokenCipher` — AES-256-GCM com IV aleatório de 12B; tokens em repouso autenticados (RN17/22).
+  - `InMemoryOAuthStateStore` — TTL 10min + sweeper periódico para o `state` OAuth (one-shot, anti-CSRF/replay).
+  - `pkce.ts` — `generateCodeVerifier`/`deriveCodeChallenge`/`generateOAuthState` (RFC 7636).
+  - `PaymentGatewayRegistry` — resolve adapters por nome (`mercado_pago` registrado; Stripe/Pagar.me prontos para entrar).
+  - `MercadoPagoGateway` — implementa `IPaymentGateway` com OAuth completo (authorize, exchange com PKCE, refresh). `createTipPayment`/`refundTipPayment` lançam erro explícito de "Entrega B".
 
 #### HTTP / API — COMPLETO E ENDURECIDO
 - ElysiaJS 1.4 + Swagger em `/docs`.
@@ -42,32 +49,39 @@
 
 ##### Rotas (todas sob `/v1`)
 - `POST /v1/artists`, `POST /v1/artists/login`
-- `POST /v1/shows`, `POST /v1/shows/:id/finish` *(JWT + ownership)*
+- `POST /v1/shows`, `POST /v1/shows/:showId/finish` *(JWT + ownership)*
 - `GET/POST /v1/songs`, `PATCH /v1/songs/:id/availability` *(JWT + ownership)*
 - `POST /v1/shows/:showId/requests` *(público, cookie de sessão)*
 - `GET /v1/shows/:showId/requests`, `PATCH /v1/shows/:showId/songs/:songId/play`, `PATCH /v1/shows/:showId/requests/:requestId/cancel` *(JWT + ownership)*
 - `GET /v1/metrics/me` *(JWT — métricas do artista)*
+- `POST /v1/payment-accounts/:gateway/connect` *(JWT — inicia OAuth Connect, devolve authorizeUrl + state)*
+- `GET /v1/payment-accounts/callback` *(público — identidade provada pelo state)*
+- `DELETE /v1/payment-accounts/:gateway` *(JWT — desconecta a conta)*
 - `GET /v1/admin/metrics`, `POST /v1/admin/styles`, `POST /v1/admin/styles/merge` *(JWT + whitelist)*
 
 #### Testes e Qualidade
-- **58 testes passando, 0 falhas** (18 arquivos) — unit + VO + filtro.
+- **96 testes passando, 0 falhas** (24 arquivos) — unit + VO + filtro + cipher + PKCE + state store + adapter MP + use cases de conexão + integração.
 - `bun tsc --noEmit` → **0 erros** (TypeScript strict + `verbatimModuleSyntax`).
+- DB sincronizado (`bun db:push` e `bun db:push:test`) com as novas colunas de pagamento.
 
 ---
 
 ### Em Aberto / Próximos Passos 🚀
 
-1. **Pagamentos — Adapter Mercado Pago (Decisão tomada: MP no MVP)**
-   - **Decisão**: MP como gateway inicial via **split nativo** (RN16), com domínio multi-gateway (RN14).
-   - **Domínio já preparado**: `IPaymentGateway` port, `PaymentAccount` VO, `Artist.paymentAccount?`, `MusicRequest.payment` (paymentId/gateway/status) já existem e estão testados.
+1. **Pagamentos — Entrega B (cobrança PIX + estorno)**
+   - **Pré-requisitos cumpridos** (Entrega A): adapter MP com OAuth, tokens criptografados em repouso, registry multi-gateway, port `IPaymentGateway` estável.
    - **Pendente**:
-     - Adapter `MercadoPagoGateway` (SDK oficial + fluxo OAuth Connect).
-     - Use cases: `ConnectArtistPaymentAccountUseCase`, `DisconnectArtistPaymentAccountUseCase`, `CreateTipPaymentUseCase`, `RefundTipPaymentUseCase`.
-     - Controllers: `/v1/payment-accounts/*` (OAuth start/callback/disconnect) + `/v1/webhooks/mercado-pago`.
-     - Criptografia em repouso dos tokens OAuth (KEK via env, possivelmente migrar para KMS).
-     - Estorno (RN05/RN18) via API.
+     - `MercadoPagoGateway.createTipPayment` — gerar PIX inline com split nativo 85/15 (RN16).
+     - `MercadoPagoGateway.refundTipPayment` — estorno via API (RN18).
+     - `CreateTipPaymentUseCase` — chamado pelo `RequestMusicUseCase` quando `tipAmountInCents > 0`; cria o pagamento e atacha em `MusicRequest.payment`.
+     - `RefundTipPaymentUseCase` — disparado quando música é desativada / show encerrado sem tocar (RN05/RN18).
+     - Webhook `POST /v1/webhooks/mercado-pago` — fonte autoritativa de `paymentStatus`, com idempotência por `paymentId` + `eventId` (regra 23).
+     - Validação end-to-end com TESTUSER comprador + cartão/PIX de teste.
 
-2. **Frontend (Vite + React)**
+2. **Validação ponta a ponta da Entrega A (manual)**
+   - Subir o server, autenticar artista, iniciar OAuth Connect, logar como TESTUSER, confirmar que `artists.payment_*` é populado com tokens criptografados.
+
+3. **Frontend (Vite + React)**
    - Página pública (QR Code) — repertório + pedido (cookie de sessão).
    - Painel do artista (login, lista de pedidos em tempo real, mark-as-played).
    - **Onboarding de pagamento** ao criar primeiro show (CTA "Conectar Mercado Pago" — RN15).

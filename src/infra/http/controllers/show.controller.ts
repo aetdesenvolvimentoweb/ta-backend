@@ -40,13 +40,13 @@ export const showController = (
     /**
      * Finalizar um show
      */
-    .post("/:id/finish", async ({ params, getArtistId }) => {
+    .post("/:showId/finish", async ({ params, getArtistId }) => {
       const artistId = await getArtistId();
-      await finishShowUseCase.execute({ showId: params.id, artistId });
+      await finishShowUseCase.execute({ showId: params.showId, artistId });
       return { message: "Show finalizado com sucesso" };
     }, {
       params: t.Object({
-        id: t.String({ format: "uuid" })
+        showId: t.String({ format: "uuid" })
       }),
       detail: {
         summary: "Finalizar um show manualmente",

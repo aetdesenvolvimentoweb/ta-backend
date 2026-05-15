@@ -2,7 +2,12 @@
  * Validação fail-fast das variáveis de ambiente.
  * Importado uma única vez em `index.ts` (boot do servidor) — não em testes unitários.
  */
-const required = ['DATABASE_URL', 'JWT_SECRET', 'COOKIE_SECRET'] as const;
+const required = [
+  'DATABASE_URL',
+  'JWT_SECRET',
+  'COOKIE_SECRET',
+  'PAYMENT_TOKEN_KEY',
+] as const;
 
 const missing = required.filter(key => !process.env[key]);
 if (missing.length > 0) {
@@ -19,6 +24,12 @@ if ((process.env.COOKIE_SECRET ?? '').length < 32) {
   throw new Error('COOKIE_SECRET deve ter no mínimo 32 caracteres.');
 }
 
+// PAYMENT_TOKEN_KEY: 32 bytes (256 bits) em hex → 64 chars.
+const tokenKey = process.env.PAYMENT_TOKEN_KEY!;
+if (!/^[0-9a-fA-F]{64}$/.test(tokenKey)) {
+  throw new Error('PAYMENT_TOKEN_KEY deve ser uma string hex de 64 caracteres (32 bytes). Gere com: `bun -e "console.log(crypto.getRandomValues(new Uint8Array(32)).reduce((s,b)=>s+b.toString(16).padStart(2,\'0\'),\'\'))"`');
+}
+
 export const env = {
   NODE_ENV: process.env.NODE_ENV ?? 'development',
   PORT: Number(process.env.PORT ?? 3000),
@@ -33,4 +44,13 @@ export const env = {
     .split(',')
     .map(s => s.trim().toLowerCase())
     .filter(Boolean),
+
+  PAYMENT_TOKEN_KEY: tokenKey,
+
+  // Mercado Pago (opcional no boot — fail-fast acontece apenas se a feature for usada).
+  MP_CLIENT_ID: process.env.MP_CLIENT_ID ?? '',
+  MP_CLIENT_SECRET: process.env.MP_CLIENT_SECRET ?? '',
+  MP_REDIRECT_URI: process.env.MP_REDIRECT_URI ?? '',
+  /** Base URL para onde o backend devolve o usuário após o callback OAuth (frontend). */
+  MP_FRONTEND_RETURN_URL: process.env.MP_FRONTEND_RETURN_URL ?? 'http://localhost:5173/payment-account',
 } as const;

@@ -12,6 +12,11 @@ import { DrizzleStyleRepository } from './infra/db/repositories/drizzle-style.re
 import { DrizzleAdminWhitelistRepository } from './infra/db/repositories/drizzle-admin-whitelist.repository'
 import { BunPasswordHasher } from './infra/security/bun-password-hasher'
 import { BasicProfanityFilter } from './infra/security/basic-profanity-filter'
+import { AesGcmTokenCipher } from './infra/security/token-cipher'
+import { InMemoryOAuthStateStore } from './infra/security/oauth-state-store'
+import { DrizzlePaymentCredentialsRepository } from './infra/db/repositories/drizzle-payment-credentials.repository'
+import { PaymentGatewayRegistry } from './infra/payments/payment-gateway-registry'
+import { MercadoPagoGateway } from './infra/payments/mercado-pago.gateway'
 
 // Use Cases
 import { CreateArtistUseCase } from './application/use-cases/create-artist.use-case'
@@ -27,6 +32,11 @@ import { CreateStyleUseCase, MergeStylesUseCase } from './application/use-cases/
 import { ValidateAdminWhitelistUseCase } from './application/use-cases/admin-whitelist.use-case'
 import { GetAppMetricsUseCase } from './application/use-cases/get-app-metrics.use-case'
 import { GetArtistMetricsUseCase } from './application/use-cases/get-artist-metrics.use-case'
+import {
+  StartPaymentConnectionUseCase,
+  CompletePaymentConnectionUseCase,
+  DisconnectPaymentAccountUseCase,
+} from './application/use-cases/payment-connection.use-case'
 
 // Controllers
 import { artistController } from './infra/http/controllers/artist.controller'
@@ -35,6 +45,7 @@ import { repertoireController } from './infra/http/controllers/repertoire.contro
 import { musicRequestController } from './infra/http/controllers/music-request.controller'
 import { adminController } from './infra/http/controllers/admin.controller'
 import { metricsController } from './infra/http/controllers/metrics.controller'
+import { paymentAccountController, paymentCallbackController } from './infra/http/controllers/payment-account.controller'
 
 // Middlewares
 import { rateLimit } from './infra/http/middlewares/rate-limit.middleware'
@@ -50,6 +61,21 @@ const requestRepository = new DrizzleMusicRequestRepository()
 const songRepository = new DrizzleSongRepository()
 const styleRepository = new DrizzleStyleRepository()
 const whitelistRepository = new DrizzleAdminWhitelistRepository(env.ADMIN_WHITELIST)
+const tokenCipher = new AesGcmTokenCipher(env.PAYMENT_TOKEN_KEY)
+const credentialsRepository = new DrizzlePaymentCredentialsRepository(tokenCipher)
+const oauthStateStore = new InMemoryOAuthStateStore()
+oauthStateStore.startSweeper()
+
+// Payment gateway registry — adicionar Stripe/Pagar.me aqui no futuro (RN14).
+const paymentRegistry = new PaymentGatewayRegistry()
+if (env.MP_CLIENT_ID && env.MP_CLIENT_SECRET) {
+  paymentRegistry.register(new MercadoPagoGateway({
+    clientId: env.MP_CLIENT_ID,
+    clientSecret: env.MP_CLIENT_SECRET,
+  }))
+} else {
+  logger.warn('Mercado Pago não registrado: MP_CLIENT_ID/MP_CLIENT_SECRET ausentes. Conexão de conta desabilitada.')
+}
 
 // 2. Use Cases
 const createArtistUseCase = new CreateArtistUseCase(artistRepository, passwordHasher, logger)
@@ -68,6 +94,14 @@ const mergeStylesUseCase = new MergeStylesUseCase(styleRepository, logger)
 const validateAdminWhitelistUseCase = new ValidateAdminWhitelistUseCase(whitelistRepository, logger)
 const getAppMetricsUseCase = new GetAppMetricsUseCase(requestRepository, artistRepository, songRepository, logger)
 const getArtistMetricsUseCase = new GetArtistMetricsUseCase(requestRepository, showRepository, logger)
+const startPaymentConnectionUseCase = new StartPaymentConnectionUseCase(artistRepository, paymentRegistry, oauthStateStore, logger)
+const completePaymentConnectionUseCase = new CompletePaymentConnectionUseCase(artistRepository, credentialsRepository, paymentRegistry, oauthStateStore, logger)
+const disconnectPaymentAccountUseCase = new DisconnectPaymentAccountUseCase(artistRepository, credentialsRepository, logger)
+
+const paymentControllerConfig = {
+  redirectUri: env.MP_REDIRECT_URI || `http://localhost:${env.PORT}/v1/payment-accounts/callback`,
+  frontendReturnUrl: env.MP_FRONTEND_RETURN_URL,
+}
 
 // 3. Rotas v1
 const v1Router = new Elysia({ prefix: '/v1' })
@@ -100,12 +134,19 @@ const v1Router = new Elysia({ prefix: '/v1' })
   // Públicas
   .use(artistController(createArtistUseCase, authenticateArtistUseCase))
   .use(musicRequestController(requestMusicUseCase, getShowRequestsUseCase, cancelMusicRequestUseCase, markSongAsPlayedUseCase))
+  .use(paymentCallbackController(completePaymentConnectionUseCase, paymentControllerConfig))
   // Protegidas por JWT
   .guard({ detail: { security: [{ bearerAuth: [] }] } }, (app) =>
     app
       .use(showController(startShowUseCase, finishShowUseCase))
       .use(repertoireController(addSongUseCase, getRepertoireUseCase, toggleAvailabilityUseCase))
       .use(metricsController(getArtistMetricsUseCase))
+      .use(paymentAccountController(
+        startPaymentConnectionUseCase,
+        completePaymentConnectionUseCase,
+        disconnectPaymentAccountUseCase,
+        paymentControllerConfig
+      ))
   )
   // Admin (whitelist + JWT)
   .use(adminController(
@@ -141,6 +182,7 @@ const app = new Elysia()
         { name: 'Repertoire', description: 'Gestão do repertório de músicas do artista' },
         { name: 'Music Request', description: 'Pedidos de músicas pelo público (Fricção Zero)' },
         { name: 'Metrics', description: 'Métricas financeiras do artista' },
+        { name: 'Payment Account', description: 'Conexão OAuth de conta no gateway de pagamento (RN14/RN15)' },
         { name: 'Admin', description: 'Painel administrativo (whitelist)' },
       ],
       components: {

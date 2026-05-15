@@ -87,7 +87,7 @@ O **Toque Aquela** é uma plataforma que moderniza a interação entre o públic
 - **Framework:** ElysiaJS 1.4 (Backend) + Vite/React (Frontend — pendente).
 - **Banco de Dados:** PostgreSQL + Drizzle ORM (schema + migrations configurados).
 - **Autenticação:** JWT Bearer (`@elysiajs/jwt`) com `expiresIn` configurável + bootstrap-check de secret. Admin: JWT + whitelist de e-mails (`ADMIN_WHITELIST` via env; tabela Postgres planejada para RN12 final).
-- **Pagamentos:** Port `IPaymentGateway` (agnóstico); adapter inicial `MercadoPagoGateway` (pendente — fluxo OAuth Connect + split nativo). Domínio expõe `Artist.paymentAccount?` e `MusicRequest.payment` (paymentId, gateway, status). Tokens OAuth criptografados em repouso (KMS/env-key).
+- **Pagamentos:** Port `IPaymentGateway` (agnóstico) + `IPaymentGatewayRegistry` para resolução por nome. Adapter `MercadoPagoGateway` com fluxo OAuth Connect completo (authorize + exchange com PKCE/RFC 7636 + refresh). `createTipPayment` e `refundTipPayment` pendentes (Entrega B — split nativo PIX + estorno). Tokens OAuth criptografados em repouso via AES-256-GCM (`AesGcmTokenCipher`, chave de 32 bytes em `PAYMENT_TOKEN_KEY`). Identidade OAuth protegida por `state` one-shot (`InMemoryOAuthStateStore` com TTL 10 min). Domínio expõe `Artist.paymentAccount?` e `MusicRequest.payment` (paymentId, gateway, status).
 - **Identidade pública:** cookie HttpOnly assinado `customer_sid` para impedir bypass do RN09.
 - **Endurecimento:** CORS, Security Headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, HSTS em prod), Rate Limit in-memory por IP, Profanity Filter PT-BR (RN08).
 - **Documentação:** Swagger/OpenAPI ativa em `/docs`.
