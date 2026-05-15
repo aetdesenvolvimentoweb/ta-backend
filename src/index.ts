@@ -37,6 +37,11 @@ import {
   CompletePaymentConnectionUseCase,
   DisconnectPaymentAccountUseCase,
 } from './application/use-cases/payment-connection.use-case'
+import {
+  CreateTipPaymentUseCase,
+  RefundTipPaymentUseCase,
+} from './application/use-cases/tip-payment.use-case'
+import { ProcessPaymentNotificationUseCase } from './application/use-cases/process-payment-notification.use-case'
 
 // Controllers
 import { artistController } from './infra/http/controllers/artist.controller'
@@ -46,6 +51,7 @@ import { musicRequestController } from './infra/http/controllers/music-request.c
 import { adminController } from './infra/http/controllers/admin.controller'
 import { metricsController } from './infra/http/controllers/metrics.controller'
 import { paymentAccountController, paymentCallbackController } from './infra/http/controllers/payment-account.controller'
+import { webhookController } from './infra/http/controllers/webhook.controller'
 
 // Middlewares
 import { rateLimit } from './infra/http/middlewares/rate-limit.middleware'
@@ -81,13 +87,11 @@ if (env.MP_CLIENT_ID && env.MP_CLIENT_SECRET) {
 const createArtistUseCase = new CreateArtistUseCase(artistRepository, passwordHasher, logger)
 const authenticateArtistUseCase = new AuthenticateArtistUseCase(artistRepository, passwordHasher, logger)
 const startShowUseCase = new StartShowUseCase(showRepository, artistRepository, logger)
-const finishShowUseCase = new FinishShowUseCase(showRepository, requestRepository, logger)
 const addSongUseCase = new AddSongUseCase(songRepository, styleRepository, logger)
 const getRepertoireUseCase = new GetRepertoireUseCase(songRepository, logger)
 const toggleAvailabilityUseCase = new ToggleSongAvailabilityUseCase(songRepository, logger)
 const requestMusicUseCase = new RequestMusicUseCase(requestRepository, showRepository, songRepository, artistRepository, logger, profanityFilter)
 const getShowRequestsUseCase = new GetShowRequestsUseCase(requestRepository, showRepository, logger)
-const cancelMusicRequestUseCase = new CancelMusicRequestUseCase(requestRepository, showRepository, logger)
 const markSongAsPlayedUseCase = new MarkSongAsPlayedUseCase(requestRepository, showRepository, logger)
 const createStyleUseCase = new CreateStyleUseCase(styleRepository, logger)
 const mergeStylesUseCase = new MergeStylesUseCase(styleRepository, logger)
@@ -97,6 +101,14 @@ const getArtistMetricsUseCase = new GetArtistMetricsUseCase(requestRepository, s
 const startPaymentConnectionUseCase = new StartPaymentConnectionUseCase(artistRepository, paymentRegistry, oauthStateStore, logger)
 const completePaymentConnectionUseCase = new CompletePaymentConnectionUseCase(artistRepository, credentialsRepository, paymentRegistry, oauthStateStore, logger)
 const disconnectPaymentAccountUseCase = new DisconnectPaymentAccountUseCase(artistRepository, credentialsRepository, logger)
+
+// Pagamentos — Entrega B (declarados antes de use cases que dependem deles)
+const createTipPaymentUseCase = new CreateTipPaymentUseCase(requestRepository, showRepository, artistRepository, credentialsRepository, paymentRegistry, logger)
+const refundTipPaymentUseCase = new RefundTipPaymentUseCase(requestRepository, showRepository, credentialsRepository, paymentRegistry, logger)
+const processPaymentNotificationUseCase = new ProcessPaymentNotificationUseCase(requestRepository, showRepository, credentialsRepository, paymentRegistry, logger)
+
+const finishShowUseCase = new FinishShowUseCase(showRepository, requestRepository, logger, refundTipPaymentUseCase)
+const cancelMusicRequestUseCase = new CancelMusicRequestUseCase(requestRepository, showRepository, logger, refundTipPaymentUseCase)
 
 const paymentControllerConfig = {
   redirectUri: env.MP_REDIRECT_URI || `http://localhost:${env.PORT}/v1/payment-accounts/callback`,
@@ -133,8 +145,9 @@ const v1Router = new Elysia({ prefix: '/v1' })
   })
   // Públicas
   .use(artistController(createArtistUseCase, authenticateArtistUseCase))
-  .use(musicRequestController(requestMusicUseCase, getShowRequestsUseCase, cancelMusicRequestUseCase, markSongAsPlayedUseCase))
+  .use(musicRequestController(requestMusicUseCase, getShowRequestsUseCase, cancelMusicRequestUseCase, markSongAsPlayedUseCase, createTipPaymentUseCase))
   .use(paymentCallbackController(completePaymentConnectionUseCase, paymentControllerConfig))
+  .use(webhookController(processPaymentNotificationUseCase, env.MP_WEBHOOK_SECRET))
   // Protegidas por JWT
   .guard({ detail: { security: [{ bearerAuth: [] }] } }, (app) =>
     app

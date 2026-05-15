@@ -68,6 +68,11 @@ export class DrizzleMusicRequestRepository implements IMusicRequestRepository {
     return row ? rowToRequest(row) : null;
   }
 
+  async findByPaymentId(paymentId: string): Promise<MusicRequest | null> {
+    const [row] = await db.select().from(musicRequests).where(eq(musicRequests.paymentId, paymentId));
+    return row ? rowToRequest(row) : null;
+  }
+
   async findByShowId(showId: string): Promise<MusicRequest[]> {
     const rows = await db.select().from(musicRequests)
       .where(eq(musicRequests.showId, showId))

@@ -2,6 +2,7 @@ import type { IShowRepository } from "../../core/ports/show.repository";
 import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
 import type { ILogger } from "../../core/ports/logger.port";
 import { NotFoundError, BusinessRuleError, UnauthorizedError } from "../../core/errors/app-error";
+import type { RefundTipPaymentUseCase } from "./tip-payment.use-case";
 
 export interface FinishShowInput {
   showId: string;
@@ -11,12 +12,14 @@ export interface FinishShowInput {
 /**
  * Caso de Uso: Encerrar um show manualmente.
  * Ao encerrar, os pedidos pendentes são cancelados.
+ * Pedidos com gorjeta aprovada são estornados automaticamente (RN05/RN18).
  */
 export class FinishShowUseCase {
   constructor(
     private showRepository: IShowRepository,
     private requestRepository: IMusicRequestRepository,
-    private logger: ILogger
+    private logger: ILogger,
+    private refundTipPaymentUseCase?: RefundTipPaymentUseCase,
   ) {}
 
   async execute(input: FinishShowInput): Promise<void> {
@@ -39,12 +42,16 @@ export class FinishShowUseCase {
     show.finish();
     await this.showRepository.save(show);
 
-    // 2. Cancelar pedidos que ficaram pendentes (RN: Opcional, mas boa prática)
+    // 2. Cancelar pedidos pendentes — estornar gorjetas aprovadas (RN05/RN18)
     const pendingRequests = await this.requestRepository.findByShowId(input.showId);
     for (const req of pendingRequests) {
       if (req.status === 'pending') {
-        req.cancel();
-        await this.requestRepository.save(req);
+        if (req.payment?.status === 'approved' && this.refundTipPaymentUseCase) {
+          await this.refundTipPaymentUseCase.execute({ musicRequestId: req.id });
+        } else {
+          req.cancel();
+          await this.requestRepository.save(req);
+        }
       }
     }
 

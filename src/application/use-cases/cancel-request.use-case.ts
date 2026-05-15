@@ -2,6 +2,7 @@ import type { IMusicRequestRepository } from "../../core/ports/music-request.rep
 import type { IShowRepository } from "../../core/ports/show.repository";
 import type { ILogger } from "../../core/ports/logger.port";
 import { NotFoundError, BusinessRuleError, UnauthorizedError } from "../../core/errors/app-error";
+import type { RefundTipPaymentUseCase } from "./tip-payment.use-case";
 
 export interface CancelMusicRequestInput {
   requestId: string;
@@ -11,12 +12,14 @@ export interface CancelMusicRequestInput {
 /**
  * Caso de Uso: Cancelar um pedido de música (RN05).
  * Apenas o artista dono do show pode cancelar.
+ * Se o pedido tiver pagamento aprovado, estorna automaticamente (RN18).
  */
 export class CancelMusicRequestUseCase {
   constructor(
     private requestRepository: IMusicRequestRepository,
     private showRepository: IShowRepository,
-    private logger: ILogger
+    private logger: ILogger,
+    private refundTipPaymentUseCase?: RefundTipPaymentUseCase,
   ) {}
 
   async execute(input: CancelMusicRequestInput): Promise<void> {
@@ -40,9 +43,12 @@ export class CancelMusicRequestUseCase {
       throw new BusinessRuleError("Não é possível cancelar um pedido que já foi tocado.");
     }
 
-    request.cancel();
-    // Estorno via gateway de pagamento será disparado aqui no futuro (RN05).
-    await this.requestRepository.save(request);
+    if (request.payment?.status === 'approved' && this.refundTipPaymentUseCase) {
+      await this.refundTipPaymentUseCase.execute({ musicRequestId: request.id });
+    } else {
+      request.cancel();
+      await this.requestRepository.save(request);
+    }
     this.logger.info(`Pedido ${input.requestId} cancelado pelo artista ${input.artistId}`);
   }
 }

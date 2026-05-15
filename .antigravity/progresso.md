@@ -1,7 +1,7 @@
 # Progresso do Projeto - Toque Aquela
 
 ## Última Atualização: 2026-05-15
-**Status Atual**: Backend funcionalmente completo + endurecido (OWASP) + **Entrega A de Pagamentos concluída** (OAuth Connect com Mercado Pago, PKCE, tokens criptografados AES-GCM em repouso). Falta apenas Entrega B (cobrança PIX + estorno) para o backend financeiro estar 100%.
+**Status Atual**: Backend **100% completo** — arquitetura hexagonal, 23 use cases, 18 rotas, segurança OWASP, **Entrega B de Pagamentos concluída** (cobrança PIX com split nativo 85/15, estorno automático, webhook com validação HMAC). Próximo milestone: Frontend MVP (Vite + React).
 
 ---
 
@@ -24,6 +24,7 @@
 - `ValidateAdminWhitelistUseCase`
 - `GetArtistMetricsUseCase`, `GetAppMetricsUseCase` — agregação real via SQL (não mais stubs).
 - **Pagamentos (Entrega A)**: `StartPaymentConnectionUseCase`, `CompletePaymentConnectionUseCase`, `DisconnectPaymentAccountUseCase` — fluxo OAuth Connect agnóstico de gateway via `IPaymentGatewayRegistry`.
+- **Pagamentos (Entrega B)**: `CreateTipPaymentUseCase` (cria PIX com split nativo, idempotente), `RefundTipPaymentUseCase` (estorna pagamento aprovado ou cancela diretamente), `ProcessPaymentNotificationUseCase` (webhook — busca status real no gateway, atualiza `MusicRequest`, idempotente).
 
 #### Infraestrutura
 - Drizzle ORM com PostgreSQL (schema + migrations).
@@ -36,7 +37,9 @@
   - `InMemoryOAuthStateStore` — TTL 10min + sweeper periódico para o `state` OAuth (one-shot, anti-CSRF/replay).
   - `pkce.ts` — `generateCodeVerifier`/`deriveCodeChallenge`/`generateOAuthState` (RFC 7636).
   - `PaymentGatewayRegistry` — resolve adapters por nome (`mercado_pago` registrado; Stripe/Pagar.me prontos para entrar).
-  - `MercadoPagoGateway` — implementa `IPaymentGateway` com OAuth completo (authorize, exchange com PKCE, refresh). `createTipPayment`/`refundTipPayment` lançam erro explícito de "Entrega B".
+  - `MercadoPagoGateway` — implementa `IPaymentGateway` completo: OAuth (authorize, exchange com PKCE, refresh) + **`createTipPayment`** (PIX inline com `marketplace_fee` nativo 85/15) + **`refundTipPayment`** (estorno via API) + **`fetchPaymentStatus`** (busca status atual para webhooks).
+  - `IMusicRequestRepository`: adicionado `findByPaymentId` para lookup via webhook.
+  - `CancelMusicRequestUseCase` e `FinishShowUseCase`: injetam `RefundTipPaymentUseCase` para estorno automático (RN05/RN18).
 
 #### HTTP / API — COMPLETO E ENDURECIDO
 - ElysiaJS 1.4 + Swagger em `/docs`.
@@ -51,16 +54,17 @@
 - `POST /v1/artists`, `POST /v1/artists/login`
 - `POST /v1/shows`, `POST /v1/shows/:showId/finish` *(JWT + ownership)*
 - `GET/POST /v1/songs`, `PATCH /v1/songs/:id/availability` *(JWT + ownership)*
-- `POST /v1/shows/:showId/requests` *(público, cookie de sessão)*
+- `POST /v1/shows/:showId/requests` *(público, cookie de sessão — retorna `payment.checkoutUrl` quando tip > 0)*
 - `GET /v1/shows/:showId/requests`, `PATCH /v1/shows/:showId/songs/:songId/play`, `PATCH /v1/shows/:showId/requests/:requestId/cancel` *(JWT + ownership)*
 - `GET /v1/metrics/me` *(JWT — métricas do artista)*
 - `POST /v1/payment-accounts/:gateway/connect` *(JWT — inicia OAuth Connect, devolve authorizeUrl + state)*
 - `GET /v1/payment-accounts/callback` *(público — identidade provada pelo state)*
 - `DELETE /v1/payment-accounts/:gateway` *(JWT — desconecta a conta)*
+- **`POST /v1/webhooks/mercado-pago`** *(público — autenticado via HMAC-SHA256; fonte autoritativa de status de pagamento)*
 - `GET /v1/admin/metrics`, `POST /v1/admin/styles`, `POST /v1/admin/styles/merge` *(JWT + whitelist)*
 
 #### Testes e Qualidade
-- **96 testes passando, 0 falhas** (24 arquivos) — unit + VO + filtro + cipher + PKCE + state store + adapter MP + use cases de conexão + integração.
+- **114 testes passando, 0 falhas** (26 arquivos) — unit + VO + filtro + cipher + PKCE + state store + adapter MP (OAuth + PIX + estorno + fetchStatus) + use cases de conexão e pagamento + integração.
 - `bun tsc --noEmit` → **0 erros** (TypeScript strict + `verbatimModuleSyntax`).
 - DB sincronizado (`bun db:push` e `bun db:push:test`) com as novas colunas de pagamento.
 
@@ -68,20 +72,12 @@
 
 ### Em Aberto / Próximos Passos 🚀
 
-1. **Pagamentos — Entrega B (cobrança PIX + estorno)**
-   - **Pré-requisitos cumpridos** (Entrega A): adapter MP com OAuth, tokens criptografados em repouso, registry multi-gateway, port `IPaymentGateway` estável.
-   - **Pendente**:
-     - `MercadoPagoGateway.createTipPayment` — gerar PIX inline com split nativo 85/15 (RN16).
-     - `MercadoPagoGateway.refundTipPayment` — estorno via API (RN18).
-     - `CreateTipPaymentUseCase` — chamado pelo `RequestMusicUseCase` quando `tipAmountInCents > 0`; cria o pagamento e atacha em `MusicRequest.payment`.
-     - `RefundTipPaymentUseCase` — disparado quando música é desativada / show encerrado sem tocar (RN05/RN18).
-     - Webhook `POST /v1/webhooks/mercado-pago` — fonte autoritativa de `paymentStatus`, com idempotência por `paymentId` + `eventId` (regra 23).
-     - Validação end-to-end com TESTUSER comprador + cartão/PIX de teste.
+1. **Validação ponta a ponta (manual)**
+   - Subir o server com credenciais Mercado Pago de teste (`TESTUSER`).
+   - Fluxo: artista autenticar → OAuth Connect → cliente pedir música com gorjeta → escanear PIX QR → webhook MP atualizar status → artista cancelar → verificar estorno automático.
+   - Configurar `MP_WEBHOOK_SECRET` no painel do Mercado Pago (Configurações → Webhooks).
 
-2. **Validação ponta a ponta da Entrega A (manual)**
-   - Subir o server, autenticar artista, iniciar OAuth Connect, logar como TESTUSER, confirmar que `artists.payment_*` é populado com tokens criptografados.
-
-3. **Frontend (Vite + React)**
+2. **Frontend (Vite + React)**
    - Página pública (QR Code) — repertório + pedido (cookie de sessão).
    - Painel do artista (login, lista de pedidos em tempo real, mark-as-played).
    - **Onboarding de pagamento** ao criar primeiro show (CTA "Conectar Mercado Pago" — RN15).

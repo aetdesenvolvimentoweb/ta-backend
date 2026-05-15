@@ -22,6 +22,11 @@ export interface IMusicRequestRepository {
   findById(id: string): Promise<MusicRequest | null>;
 
   /**
+   * Busca um pedido pelo ID de pagamento no gateway (para processamento de webhooks).
+   */
+  findByPaymentId(paymentId: string): Promise<MusicRequest | null>;
+
+  /**
    * Atualiza o status de múltiplos pedidos de uma mesma música (RN03).
    */
   updateStatusBySong(showId: string, songId: string, status: MusicRequest['status']): Promise<void>;

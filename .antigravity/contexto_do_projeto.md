@@ -87,11 +87,11 @@ O **Toque Aquela** é uma plataforma que moderniza a interação entre o públic
 - **Framework:** ElysiaJS 1.4 (Backend) + Vite/React (Frontend — pendente).
 - **Banco de Dados:** PostgreSQL + Drizzle ORM (schema + migrations configurados).
 - **Autenticação:** JWT Bearer (`@elysiajs/jwt`) com `expiresIn` configurável + bootstrap-check de secret. Admin: JWT + whitelist de e-mails (`ADMIN_WHITELIST` via env; tabela Postgres planejada para RN12 final).
-- **Pagamentos:** Port `IPaymentGateway` (agnóstico) + `IPaymentGatewayRegistry` para resolução por nome. Adapter `MercadoPagoGateway` com fluxo OAuth Connect completo (authorize + exchange com PKCE/RFC 7636 + refresh). `createTipPayment` e `refundTipPayment` pendentes (Entrega B — split nativo PIX + estorno). Tokens OAuth criptografados em repouso via AES-256-GCM (`AesGcmTokenCipher`, chave de 32 bytes em `PAYMENT_TOKEN_KEY`). Identidade OAuth protegida por `state` one-shot (`InMemoryOAuthStateStore` com TTL 10 min). Domínio expõe `Artist.paymentAccount?` e `MusicRequest.payment` (paymentId, gateway, status).
+- **Pagamentos:** Port `IPaymentGateway` (agnóstico) + `IPaymentGatewayRegistry` para resolução por nome. Adapter `MercadoPagoGateway` **100% implementado**: OAuth Connect (authorize + exchange PKCE/RFC 7636 + refresh), `createTipPayment` (PIX inline com `marketplace_fee` nativo 85/15, idempotente via `X-Idempotency-Key`), `refundTipPayment` (estorno via API), `fetchPaymentStatus` (para webhooks). Tokens OAuth criptografados em repouso via AES-256-GCM (`AesGcmTokenCipher`, chave de 32 bytes em `PAYMENT_TOKEN_KEY`). Identidade OAuth protegida por `state` one-shot (`InMemoryOAuthStateStore` TTL 10 min). Domínio expõe `Artist.paymentAccount?` e `MusicRequest.payment` (paymentId, gateway, status). Webhook `POST /v1/webhooks/mercado-pago` com validação HMAC-SHA256 e idempotência por status.
 - **Identidade pública:** cookie HttpOnly assinado `customer_sid` para impedir bypass do RN09.
 - **Endurecimento:** CORS, Security Headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, HSTS em prod), Rate Limit in-memory por IP, Profanity Filter PT-BR (RN08).
 - **Documentação:** Swagger/OpenAPI ativa em `/docs`.
-- **Testes:** Bun Test — 58 testes unitários, 18 arquivos, 0 falhas. Integration tests separados (`*.integration.test.ts`).
+- **Testes:** Bun Test — **114 testes, 26 arquivos, 0 falhas**. Unit (use cases, entities, VOs, security, gateway) + integration (`*.integration.test.ts`).
 - **Deploy:** Render.com via Docker (pendente).
 
 ## Financeiro

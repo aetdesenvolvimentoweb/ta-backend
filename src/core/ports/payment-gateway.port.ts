@@ -55,6 +55,12 @@ export interface RefundTipPaymentInput {
   artistAccessToken?: string;
 }
 
+export interface FetchPaymentStatusInput {
+  paymentId: string;
+  /** Token OAuth do artista (opcional — alguns gateways aceitam token da plataforma). */
+  artistAccessToken?: string;
+}
+
 /**
  * Port agnóstico de gateway de pagamento (RN14).
  *
@@ -78,6 +84,9 @@ export interface IPaymentGateway {
 
   /** Estorna um pagamento previamente aprovado (RN18). */
   refundTipPayment(input: RefundTipPaymentInput): Promise<void>;
+
+  /** Busca o status atual de um pagamento no gateway (usado para processar webhooks). */
+  fetchPaymentStatus(input: FetchPaymentStatusInput): Promise<TipPaymentStatus>;
 }
 
 /**

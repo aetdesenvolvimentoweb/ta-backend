@@ -2,11 +2,13 @@ import { BusinessRuleError } from "../../core/errors/app-error";
 import type {
   CreateTipPaymentInput,
   CreateTipPaymentResult,
+  FetchPaymentStatusInput,
   IPaymentGateway,
   OAuthAuthorizeUrlInput,
   OAuthCredentials,
   OAuthExchangeInput,
   RefundTipPaymentInput,
+  TipPaymentStatus,
 } from "../../core/ports/payment-gateway.port";
 import type { PaymentGatewayName } from "../../core/value-objects/payment-account.vo";
 
@@ -26,6 +28,18 @@ interface MpTokenResponse {
   expires_in?: number;
   scope?: string;
   user_id: number | string;
+}
+
+interface MpPaymentResponse {
+  id: number | string;
+  status: string;
+  point_of_interaction?: {
+    transaction_data?: {
+      ticket_url?: string;
+      qr_code?: string;
+      qr_code_base64?: string;
+    };
+  };
 }
 
 /**
@@ -120,16 +134,88 @@ export class MercadoPagoGateway implements IPaymentGateway {
     return this.toCredentials(data);
   }
 
-  async createTipPayment(_input: CreateTipPaymentInput): Promise<CreateTipPaymentResult> {
-    throw new BusinessRuleError(
-      'createTipPayment ainda não implementado para Mercado Pago (Entrega B).'
-    );
+  async createTipPayment(input: CreateTipPaymentInput): Promise<CreateTipPaymentResult> {
+    const amountInReais = input.amountInCents / 100;
+    const feeInReais = parseFloat((input.amountInCents * input.platformFeePercent / 100 / 100).toFixed(2));
+
+    const body = {
+      transaction_amount: amountInReais,
+      description: input.description,
+      payment_method_id: 'pix',
+      marketplace_fee: feeInReais,
+      payer: {
+        first_name: input.payerName ?? 'Cliente',
+        email: 'pagador@toqueaquela.app',
+      },
+    };
+
+    const res = await this.fetchFn(`${this.apiBaseUrl}/v1/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${input.artistAccessToken}`,
+        'X-Idempotency-Key': input.idempotencyKey,
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new BusinessRuleError(`Falha ao criar pagamento PIX no Mercado Pago: ${res.status} ${text}`);
+    }
+
+    const data = (await res.json()) as MpPaymentResponse;
+    return {
+      paymentId: String(data.id),
+      status: this.mapPaymentStatus(data.status),
+      checkoutUrl: data.point_of_interaction?.transaction_data?.ticket_url,
+      raw: data,
+    };
   }
 
-  async refundTipPayment(_input: RefundTipPaymentInput): Promise<void> {
-    throw new BusinessRuleError(
-      'refundTipPayment ainda não implementado para Mercado Pago (Entrega B).'
+  async refundTipPayment(input: RefundTipPaymentInput): Promise<void> {
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (input.artistAccessToken) {
+      headers['Authorization'] = `Bearer ${input.artistAccessToken}`;
+    }
+
+    const res = await this.fetchFn(
+      `${this.apiBaseUrl}/v1/payments/${input.paymentId}/refunds`,
+      { method: 'POST', headers }
     );
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new BusinessRuleError(`Falha ao estornar pagamento ${input.paymentId} no Mercado Pago: ${res.status} ${text}`);
+    }
+  }
+
+  async fetchPaymentStatus(input: FetchPaymentStatusInput): Promise<TipPaymentStatus> {
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (input.artistAccessToken) {
+      headers['Authorization'] = `Bearer ${input.artistAccessToken}`;
+    }
+
+    const res = await this.fetchFn(`${this.apiBaseUrl}/v1/payments/${input.paymentId}`, { headers });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new BusinessRuleError(`Falha ao buscar status do pagamento ${input.paymentId}: ${res.status} ${text}`);
+    }
+
+    const data = (await res.json()) as { status: string };
+    return this.mapPaymentStatus(data.status);
+  }
+
+  private mapPaymentStatus(status: string): TipPaymentStatus {
+    switch (status) {
+      case 'approved': return 'approved';
+      case 'refunded': return 'refunded';
+      case 'rejected':
+      case 'cancelled': return 'rejected';
+      default: return 'pending';
+    }
   }
 
   private toCredentials(data: MpTokenResponse): OAuthCredentials {

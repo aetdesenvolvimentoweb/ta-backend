@@ -40,6 +40,7 @@ const buildMockGateway = (overrides?: Partial<any>) => ({
   refreshAccessToken: async () => ({} as any),
   createTipPayment: async () => ({} as any),
   refundTipPayment: async () => {},
+  fetchPaymentStatus: async () => 'pending' as const,
   ...overrides,
 });
 

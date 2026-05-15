@@ -91,9 +91,113 @@ describe("MercadoPagoGateway — OAuth", () => {
     expect(creds.externalAccountId).toBe('7');
   });
 
-  test("createTipPayment/refundTipPayment ainda não implementados (Entrega B)", async () => {
-    const gw = new MercadoPagoGateway({ ...baseConfig, fetch: (async () => new Response()) as any });
-    await expect(gw.createTipPayment({} as any)).rejects.toThrow("Entrega B");
-    await expect(gw.refundTipPayment({} as any)).rejects.toThrow("Entrega B");
+});
+
+describe("MercadoPagoGateway — Pagamento PIX (Entrega B)", () => {
+  test("createTipPayment envia payload correto com split nativo e retorna paymentId + checkoutUrl", async () => {
+    let capturedBody: any = null;
+    let capturedHeaders: any = null;
+
+    const mockFetch = (async (url: string, init: RequestInit) => {
+      capturedBody = JSON.parse(String(init.body));
+      capturedHeaders = init.headers;
+      return new Response(JSON.stringify({
+        id: 98765,
+        status: 'pending',
+        point_of_interaction: {
+          transaction_data: {
+            ticket_url: 'https://mercadopago.com/pix/qr/test',
+          },
+        },
+      }), { status: 201 });
+    }) as unknown as typeof fetch;
+
+    const gw = new MercadoPagoGateway({ ...baseConfig, fetch: mockFetch });
+    const result = await gw.createTipPayment({
+      artistExternalAccountId: 'mp-ext-1',
+      artistAccessToken: 'at-seller',
+      amountInCents: 1000,
+      platformFeePercent: 15,
+      idempotencyKey: 'req-abc',
+      payerName: 'Maria',
+      description: 'Gorjeta - Toque Aquela',
+    });
+
+    expect(result.paymentId).toBe('98765');
+    expect(result.status).toBe('pending');
+    expect(result.checkoutUrl).toBe('https://mercadopago.com/pix/qr/test');
+
+    expect(capturedBody.payment_method_id).toBe('pix');
+    expect(capturedBody.transaction_amount).toBe(10); // 1000 centavos = 10 reais
+    expect(capturedBody.marketplace_fee).toBe(1.5); // 15% de 10 = 1.5
+    expect(capturedBody.payer.first_name).toBe('Maria');
+
+    expect((capturedHeaders as any)['X-Idempotency-Key']).toBe('req-abc');
+    expect((capturedHeaders as any)['Authorization']).toBe('Bearer at-seller');
+  });
+
+  test("createTipPayment lança BusinessRuleError em resposta não-OK", async () => {
+    const mockFetch = (async () => new Response('bad request', { status: 400 })) as unknown as typeof fetch;
+    const gw = new MercadoPagoGateway({ ...baseConfig, fetch: mockFetch });
+    await expect(gw.createTipPayment({
+      artistExternalAccountId: 'x', artistAccessToken: 'y',
+      amountInCents: 100, platformFeePercent: 15,
+      idempotencyKey: 'k', description: 'd',
+    })).rejects.toThrow("Falha ao criar pagamento PIX");
+  });
+
+  test("createTipPayment mapeia status 'approved' corretamente", async () => {
+    const mockFetch = (async () => new Response(JSON.stringify({
+      id: 1, status: 'approved',
+    }), { status: 201 })) as unknown as typeof fetch;
+
+    const gw = new MercadoPagoGateway({ ...baseConfig, fetch: mockFetch });
+    const result = await gw.createTipPayment({
+      artistExternalAccountId: 'x', artistAccessToken: 'y',
+      amountInCents: 500, platformFeePercent: 15,
+      idempotencyKey: 'k', description: 'd',
+    });
+    expect(result.status).toBe('approved');
+  });
+
+  test("refundTipPayment chama o endpoint correto com access token", async () => {
+    let capturedUrl = '';
+    let capturedMethod = '';
+    let capturedAuth = '';
+
+    const mockFetch = (async (url: string, init: RequestInit) => {
+      capturedUrl = url;
+      capturedMethod = String(init.method);
+      capturedAuth = (init.headers as any)?.['Authorization'] ?? '';
+      return new Response(JSON.stringify({ id: 1, status: 'approved' }), { status: 201 });
+    }) as unknown as typeof fetch;
+
+    const gw = new MercadoPagoGateway({ ...baseConfig, fetch: mockFetch });
+    await gw.refundTipPayment({ paymentId: 'pay-123', artistAccessToken: 'at-seller' });
+
+    expect(capturedUrl).toBe('https://api.test.local/v1/payments/pay-123/refunds');
+    expect(capturedMethod).toBe('POST');
+    expect(capturedAuth).toBe('Bearer at-seller');
+  });
+
+  test("refundTipPayment lança BusinessRuleError em resposta não-OK", async () => {
+    const mockFetch = (async () => new Response('error', { status: 422 })) as unknown as typeof fetch;
+    const gw = new MercadoPagoGateway({ ...baseConfig, fetch: mockFetch });
+    await expect(gw.refundTipPayment({ paymentId: 'p-1', artistAccessToken: 'at' }))
+      .rejects.toThrow("Falha ao estornar pagamento");
+  });
+
+  test("fetchPaymentStatus retorna status mapeado do gateway", async () => {
+    const mockFetch = (async () => new Response(JSON.stringify({ status: 'approved' }), { status: 200 })) as unknown as typeof fetch;
+    const gw = new MercadoPagoGateway({ ...baseConfig, fetch: mockFetch });
+    const status = await gw.fetchPaymentStatus({ paymentId: 'pay-1', artistAccessToken: 'at' });
+    expect(status).toBe('approved');
+  });
+
+  test("fetchPaymentStatus lança BusinessRuleError em resposta não-OK", async () => {
+    const mockFetch = (async () => new Response('not found', { status: 404 })) as unknown as typeof fetch;
+    const gw = new MercadoPagoGateway({ ...baseConfig, fetch: mockFetch });
+    await expect(gw.fetchPaymentStatus({ paymentId: 'pay-x' }))
+      .rejects.toThrow("Falha ao buscar status");
   });
 });

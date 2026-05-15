@@ -53,4 +53,6 @@ export const env = {
   MP_REDIRECT_URI: process.env.MP_REDIRECT_URI ?? '',
   /** Base URL para onde o backend devolve o usuário após o callback OAuth (frontend). */
   MP_FRONTEND_RETURN_URL: process.env.MP_FRONTEND_RETURN_URL ?? 'http://localhost:5173/payment-account',
+  /** Segredo HMAC para validar webhooks do Mercado Pago. Obtenha no painel de webhooks do MP. */
+  MP_WEBHOOK_SECRET: process.env.MP_WEBHOOK_SECRET ?? '',
 } as const;

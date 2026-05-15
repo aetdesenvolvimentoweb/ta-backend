@@ -4,6 +4,7 @@ import { RequestMusicUseCase } from "../../../application/use-cases/request-musi
 import { GetShowRequestsUseCase } from "../../../application/use-cases/get-show-requests.use-case";
 import { CancelMusicRequestUseCase } from "../../../application/use-cases/cancel-request.use-case";
 import { MarkSongAsPlayedUseCase } from "../../../application/use-cases/mark-song-as-played.use-case";
+import { CreateTipPaymentUseCase } from "../../../application/use-cases/tip-payment.use-case";
 
 const COOKIE_NAME = "customer_sid";
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
@@ -12,7 +13,8 @@ export const musicRequestController = (
   requestMusicUseCase: RequestMusicUseCase,
   getShowRequestsUseCase: GetShowRequestsUseCase,
   cancelMusicRequestUseCase: CancelMusicRequestUseCase,
-  markSongAsPlayedUseCase: MarkSongAsPlayedUseCase
+  markSongAsPlayedUseCase: MarkSongAsPlayedUseCase,
+  createTipPaymentUseCase?: CreateTipPaymentUseCase,
 ) =>
   new Elysia({
     prefix: "/shows",
@@ -51,12 +53,21 @@ export const musicRequestController = (
         tipAmountInCents: body.tipAmountInCents,
       });
 
+      let paymentInfo: { checkoutUrl?: string } | undefined;
+      if (body.tipAmountInCents > 0 && createTipPaymentUseCase) {
+        const tipResult = await createTipPaymentUseCase.execute({ musicRequestId: request.id });
+        if (tipResult.checkoutUrl) {
+          paymentInfo = { checkoutUrl: tipResult.checkoutUrl };
+        }
+      }
+
       return {
         id: request.id,
         songId: request.songId,
         customerName: request.customerName,
         tipAmountInCents: request.tip.amountInCents,
         status: request.status,
+        ...(paymentInfo ? { payment: paymentInfo } : {}),
       };
     }, {
       params: t.Object({
