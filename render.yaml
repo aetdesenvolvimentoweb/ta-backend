@@ -1,0 +1,59 @@
+services:
+  - type: web
+    name: ta-backend
+    runtime: docker
+    region: ohio
+    plan: free
+
+    # Roda as migrations antes de cada deploy (Drizzle aplica apenas as pendentes)
+    preDeployCommand: bun run db:migrate
+
+    envVars:
+      - key: DATABASE_URL
+        sync: false          # Preencher manualmente no painel do Render com a URL do Neon
+
+      - key: NODE_ENV
+        value: production
+
+      - key: PORT
+        value: 3000
+
+      - key: JWT_SECRET
+        generateValue: true  # Render gera automaticamente; trocar por valor fixo se precisar
+
+      - key: JWT_EXPIRES_IN
+        value: 7d
+
+      - key: CORS_ORIGIN
+        sync: false          # Ex.: https://toqueaquela.pages.dev
+
+      - key: RATE_LIMIT_REQUESTS
+        value: 30
+
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 60000
+
+      - key: ADMIN_WHITELIST
+        sync: false          # Ex.: admin@toqueaquela.app
+
+      - key: LOG_LEVEL
+        value: info
+
+      # AES-256-GCM key para tokens OAuth de pagamento (RN17)
+      # Gere com: bun -e "console.log(crypto.getRandomValues(new Uint8Array(32)).reduce((s,b)=>s+b.toString(16).padStart(2,'0'),''))"
+      - key: PAYMENT_TOKEN_KEY
+        sync: false
+
+      # Mercado Pago OAuth Connect (RN14)
+      - key: MP_CLIENT_ID
+        sync: false
+      - key: MP_CLIENT_SECRET
+        sync: false
+      - key: MP_REDIRECT_URI
+        sync: false          # Ex.: https://ta-backend.onrender.com/v1/payment-accounts/callback
+      - key: MP_FRONTEND_RETURN_URL
+        sync: false          # Ex.: https://toqueaquela.pages.dev/artista/perfil
+
+      # Webhook HMAC (Entrega B)
+      - key: MP_WEBHOOK_SECRET
+        sync: false

@@ -13,6 +13,7 @@
     "test:coverage": "bun test --coverage",
     "test:staged": "bun test $(git diff --staged --name-only | grep '\\.test\\.ts$')",
     "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:push:test": "bun --env-file=.env.test drizzle-kit push"
   },

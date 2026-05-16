@@ -12,12 +12,15 @@ RUN cd /temp/dev && bun install --frozen-lockfile
 FROM base AS prerelease
 COPY --from=install /temp/dev/node_modules node_modules
 COPY . .
+# Verifica que o TypeScript compila sem erros
+RUN bun tsc --noEmit
 
 # Imagem final de produção
 FROM base AS release
 COPY --from=install /temp/dev/node_modules node_modules
 COPY --from=prerelease /usr/src/app/src src
 COPY --from=prerelease /usr/src/app/package.json .
+COPY --from=prerelease /usr/src/app/drizzle.config.ts .
 
 # Execução
 USER bun
