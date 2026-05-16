@@ -129,6 +129,9 @@ const paymentControllerConfig = {
 
 // 3. Rotas v1
 const v1Router = new Elysia({ prefix: '/v1' })
+  // CORS preflight: ElysiaJS retorna 405 quando um caminho existente não tem OPTIONS registrado.
+  // Este handler garante que qualquer OPTIONS /v1/* retorne 204; os headers CORS vêm do plugin cors.
+  .options('*', ({ set }) => { set.status = 204 })
   .error({ AppError })
   .onError(({ code, error, set }) => {
     if (error instanceof AppError) {

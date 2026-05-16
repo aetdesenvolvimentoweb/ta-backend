@@ -21,6 +21,9 @@ services:
       - key: JWT_SECRET
         generateValue: true  # Render gera automaticamente; trocar por valor fixo se precisar
 
+      - key: COOKIE_SECRET
+        generateValue: true  # Segredo para assinar o cookie de sessão do público (customer_sid)
+
       - key: JWT_EXPIRES_IN
         value: 7d
 
