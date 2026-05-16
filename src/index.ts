@@ -19,6 +19,7 @@ import { PaymentGatewayRegistry } from './infra/payments/payment-gateway-registr
 import { MercadoPagoGateway } from './infra/payments/mercado-pago.gateway'
 
 // Use Cases
+import { GetPublicShowUseCase } from './application/use-cases/get-public-show.use-case'
 import { CreateArtistUseCase } from './application/use-cases/create-artist.use-case'
 import { AuthenticateArtistUseCase } from './application/use-cases/authenticate-artist.use-case'
 import { StartShowUseCase } from './application/use-cases/start-show.use-case'
@@ -52,6 +53,7 @@ import { adminController } from './infra/http/controllers/admin.controller'
 import { metricsController } from './infra/http/controllers/metrics.controller'
 import { paymentAccountController, paymentCallbackController } from './infra/http/controllers/payment-account.controller'
 import { webhookController } from './infra/http/controllers/webhook.controller'
+import { publicShowController } from './infra/http/controllers/public-show.controller'
 
 // Middlewares
 import { rateLimit } from './infra/http/middlewares/rate-limit.middleware'
@@ -98,6 +100,7 @@ const mergeStylesUseCase = new MergeStylesUseCase(styleRepository, logger)
 const validateAdminWhitelistUseCase = new ValidateAdminWhitelistUseCase(whitelistRepository, logger)
 const getAppMetricsUseCase = new GetAppMetricsUseCase(requestRepository, artistRepository, songRepository, logger)
 const getArtistMetricsUseCase = new GetArtistMetricsUseCase(requestRepository, showRepository, logger)
+const getPublicShowUseCase = new GetPublicShowUseCase(showRepository, artistRepository, songRepository, styleRepository, logger)
 const startPaymentConnectionUseCase = new StartPaymentConnectionUseCase(artistRepository, paymentRegistry, oauthStateStore, logger)
 const completePaymentConnectionUseCase = new CompletePaymentConnectionUseCase(artistRepository, credentialsRepository, paymentRegistry, oauthStateStore, logger)
 const disconnectPaymentAccountUseCase = new DisconnectPaymentAccountUseCase(artistRepository, credentialsRepository, logger)
@@ -145,6 +148,7 @@ const v1Router = new Elysia({ prefix: '/v1' })
   })
   // Públicas
   .use(artistController(createArtistUseCase, authenticateArtistUseCase))
+  .use(publicShowController(getPublicShowUseCase))
   .use(musicRequestController(requestMusicUseCase, getShowRequestsUseCase, cancelMusicRequestUseCase, markSongAsPlayedUseCase, createTipPaymentUseCase))
   .use(paymentCallbackController(completePaymentConnectionUseCase, paymentControllerConfig))
   .use(webhookController(processPaymentNotificationUseCase, env.MP_WEBHOOK_SECRET))
