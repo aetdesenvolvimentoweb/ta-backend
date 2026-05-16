@@ -10,6 +10,7 @@ import { CreateArtistUseCase } from './application/use-cases/create-artist.use-c
 import { AuthenticateArtistUseCase } from './application/use-cases/authenticate-artist.use-case'
 import { StartShowUseCase } from './application/use-cases/start-show.use-case'
 import { FinishShowUseCase } from './application/use-cases/finish-show.use-case'
+import { GetActiveShowUseCase } from './application/use-cases/get-active-show.use-case'
 import { artistController } from './infra/http/controllers/artist.controller'
 import { showController } from './infra/http/controllers/show.controller'
 import { authMiddleware } from './infra/http/middlewares/auth.middleware'
@@ -23,6 +24,7 @@ const createUC = new CreateArtistUseCase(artistRepo, hasher, logger)
 const authUC = new AuthenticateArtistUseCase(artistRepo, hasher, logger)
 const startShowUC = new StartShowUseCase(showRepo, artistRepo, logger)
 const finishShowUC = new FinishShowUseCase(showRepo, requestRepo, logger)
+const getActiveShowUC = new GetActiveShowUseCase(showRepo, logger)
 
 const app = new Elysia()
   .use(swagger({ path: '/docs' }))
@@ -44,7 +46,7 @@ const app = new Elysia()
       }, (app) => 
         app
           .use(authMiddleware)
-          .use(showController(startShowUC, finishShowUC))
+          .use(showController(startShowUC, finishShowUC, getActiveShowUC))
       )
   )
   .listen(3001)

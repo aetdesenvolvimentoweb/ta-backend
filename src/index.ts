@@ -24,6 +24,7 @@ import { CreateArtistUseCase } from './application/use-cases/create-artist.use-c
 import { AuthenticateArtistUseCase } from './application/use-cases/authenticate-artist.use-case'
 import { StartShowUseCase } from './application/use-cases/start-show.use-case'
 import { FinishShowUseCase } from './application/use-cases/finish-show.use-case'
+import { GetActiveShowUseCase } from './application/use-cases/get-active-show.use-case'
 import { AddSongUseCase, GetRepertoireUseCase, ToggleSongAvailabilityUseCase } from './application/use-cases/manage-repertoire.use-case'
 import { RequestMusicUseCase } from './application/use-cases/request-music.use-case'
 import { GetShowRequestsUseCase } from './application/use-cases/get-show-requests.use-case'
@@ -89,6 +90,7 @@ if (env.MP_CLIENT_ID && env.MP_CLIENT_SECRET) {
 const createArtistUseCase = new CreateArtistUseCase(artistRepository, passwordHasher, logger)
 const authenticateArtistUseCase = new AuthenticateArtistUseCase(artistRepository, passwordHasher, logger)
 const startShowUseCase = new StartShowUseCase(showRepository, artistRepository, logger)
+const getActiveShowUseCase = new GetActiveShowUseCase(showRepository, logger)
 const addSongUseCase = new AddSongUseCase(songRepository, styleRepository, logger)
 const getRepertoireUseCase = new GetRepertoireUseCase(songRepository, logger)
 const toggleAvailabilityUseCase = new ToggleSongAvailabilityUseCase(songRepository, logger)
@@ -155,7 +157,7 @@ const v1Router = new Elysia({ prefix: '/v1' })
   // Protegidas por JWT
   .guard({ detail: { security: [{ bearerAuth: [] }] } }, (app) =>
     app
-      .use(showController(startShowUseCase, finishShowUseCase))
+      .use(showController(startShowUseCase, finishShowUseCase, getActiveShowUseCase))
       .use(repertoireController(addSongUseCase, getRepertoireUseCase, toggleAvailabilityUseCase))
       .use(metricsController(getArtistMetricsUseCase))
       .use(paymentAccountController(
