@@ -30,7 +30,7 @@ import { RequestMusicUseCase } from './application/use-cases/request-music.use-c
 import { GetShowRequestsUseCase } from './application/use-cases/get-show-requests.use-case'
 import { CancelMusicRequestUseCase } from './application/use-cases/cancel-request.use-case'
 import { MarkSongAsPlayedUseCase } from './application/use-cases/mark-song-as-played.use-case'
-import { CreateStyleUseCase, MergeStylesUseCase } from './application/use-cases/admin-styles.use-case'
+import { CreateStyleUseCase, MergeStylesUseCase, ListStylesUseCase } from './application/use-cases/admin-styles.use-case'
 import { ValidateAdminWhitelistUseCase } from './application/use-cases/admin-whitelist.use-case'
 import { GetAppMetricsUseCase } from './application/use-cases/get-app-metrics.use-case'
 import { GetArtistMetricsUseCase } from './application/use-cases/get-artist-metrics.use-case'
@@ -99,6 +99,7 @@ const getShowRequestsUseCase = new GetShowRequestsUseCase(requestRepository, sho
 const markSongAsPlayedUseCase = new MarkSongAsPlayedUseCase(requestRepository, showRepository, logger)
 const createStyleUseCase = new CreateStyleUseCase(styleRepository, logger)
 const mergeStylesUseCase = new MergeStylesUseCase(styleRepository, logger)
+const listStylesUseCase = new ListStylesUseCase(styleRepository, logger)
 const validateAdminWhitelistUseCase = new ValidateAdminWhitelistUseCase(whitelistRepository, logger)
 const getAppMetricsUseCase = new GetAppMetricsUseCase(requestRepository, artistRepository, songRepository, logger)
 const getArtistMetricsUseCase = new GetArtistMetricsUseCase(requestRepository, showRepository, logger)
@@ -151,6 +152,9 @@ const v1Router = new Elysia({ prefix: '/v1' })
   // Públicas
   .use(artistController(createArtistUseCase, authenticateArtistUseCase))
   .use(publicShowController(getPublicShowUseCase))
+  .get('/styles', async () => listStylesUseCase.execute(), {
+    detail: { summary: 'Listar estilos musicais disponíveis', tags: ['Repertoire'] }
+  })
   .use(musicRequestController(requestMusicUseCase, getShowRequestsUseCase, cancelMusicRequestUseCase, markSongAsPlayedUseCase, createTipPaymentUseCase))
   .use(paymentCallbackController(completePaymentConnectionUseCase, paymentControllerConfig))
   .use(webhookController(processPaymentNotificationUseCase, env.MP_WEBHOOK_SECRET))

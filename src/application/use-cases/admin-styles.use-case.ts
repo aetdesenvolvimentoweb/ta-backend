@@ -3,6 +3,22 @@ import type { IStyleRepository, Style } from "../../core/ports/style.repository"
 import type { ILogger } from "../../core/ports/logger.port";
 
 /**
+ * Caso de Uso: Listar estilos musicais disponíveis (público).
+ */
+export class ListStylesUseCase {
+  constructor(
+    private styleRepository: IStyleRepository,
+    private logger: ILogger
+  ) {}
+
+  async execute(): Promise<Style[]> {
+    const styles = await this.styleRepository.findAll();
+    this.logger.info(`Estilos listados: ${styles.length}`);
+    return styles;
+  }
+}
+
+/**
  * Caso de Uso: Criar um estilo musical oficial (Admin).
  */
 export class CreateStyleUseCase {
