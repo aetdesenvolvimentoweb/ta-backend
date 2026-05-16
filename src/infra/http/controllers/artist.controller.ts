@@ -1,7 +1,9 @@
 import { Elysia, t } from "elysia";
 import { jwt } from "@elysiajs/jwt";
+import { authMiddleware } from "../middlewares/auth.middleware";
 import { CreateArtistUseCase } from "../../../application/use-cases/create-artist.use-case";
 import { AuthenticateArtistUseCase } from "../../../application/use-cases/authenticate-artist.use-case";
+import type { GetArtistProfileUseCase, UpdateArtistProfileUseCase } from "../../../application/use-cases/update-artist-profile.use-case";
 
 export const artistController = (
   createArtistUseCase: CreateArtistUseCase,
@@ -80,5 +82,38 @@ export const artistController = (
       detail: {
         summary: "Autenticar um artista",
         tags: ["Artist"]
+      }
+    });
+
+export const artistProfileController = (
+  getProfileUseCase: GetArtistProfileUseCase,
+  updateProfileUseCase: UpdateArtistProfileUseCase
+) =>
+  new Elysia({ prefix: "/artists" })
+    .use(authMiddleware)
+
+    .get("/me", async ({ getArtistId }) => {
+      const artistId = await getArtistId();
+      return getProfileUseCase.execute(artistId);
+    }, {
+      detail: {
+        summary: "Obter perfil do artista autenticado",
+        tags: ["Artist"],
+        security: [{ bearerAuth: [] }]
+      }
+    })
+
+    .patch("/me", async ({ body, getArtistId }) => {
+      const artistId = await getArtistId();
+      return updateProfileUseCase.execute({ artistId, ...body });
+    }, {
+      body: t.Object({
+        name: t.Optional(t.String({ minLength: 2 })),
+        socials: t.Optional(t.Record(t.String(), t.String()))
+      }),
+      detail: {
+        summary: "Atualizar nome e redes sociais do artista",
+        tags: ["Artist"],
+        security: [{ bearerAuth: [] }]
       }
     });

@@ -40,13 +40,17 @@ import {
   DisconnectPaymentAccountUseCase,
 } from './application/use-cases/payment-connection.use-case'
 import {
+  GetArtistProfileUseCase,
+  UpdateArtistProfileUseCase,
+} from './application/use-cases/update-artist-profile.use-case'
+import {
   CreateTipPaymentUseCase,
   RefundTipPaymentUseCase,
 } from './application/use-cases/tip-payment.use-case'
 import { ProcessPaymentNotificationUseCase } from './application/use-cases/process-payment-notification.use-case'
 
 // Controllers
-import { artistController } from './infra/http/controllers/artist.controller'
+import { artistController, artistProfileController } from './infra/http/controllers/artist.controller'
 import { showController } from './infra/http/controllers/show.controller'
 import { repertoireController } from './infra/http/controllers/repertoire.controller'
 import { musicRequestController } from './infra/http/controllers/music-request.controller'
@@ -104,6 +108,8 @@ const validateAdminWhitelistUseCase = new ValidateAdminWhitelistUseCase(whitelis
 const getAppMetricsUseCase = new GetAppMetricsUseCase(requestRepository, artistRepository, songRepository, logger)
 const getArtistMetricsUseCase = new GetArtistMetricsUseCase(requestRepository, showRepository, logger)
 const getPublicShowUseCase = new GetPublicShowUseCase(showRepository, artistRepository, songRepository, styleRepository, logger)
+const getArtistProfileUseCase = new GetArtistProfileUseCase(artistRepository, logger)
+const updateArtistProfileUseCase = new UpdateArtistProfileUseCase(artistRepository, logger)
 const startPaymentConnectionUseCase = new StartPaymentConnectionUseCase(artistRepository, paymentRegistry, oauthStateStore, logger)
 const completePaymentConnectionUseCase = new CompletePaymentConnectionUseCase(artistRepository, credentialsRepository, paymentRegistry, oauthStateStore, logger)
 const disconnectPaymentAccountUseCase = new DisconnectPaymentAccountUseCase(artistRepository, credentialsRepository, logger)
@@ -164,6 +170,7 @@ const v1Router = new Elysia({ prefix: '/v1' })
       .use(showController(startShowUseCase, finishShowUseCase, getActiveShowUseCase))
       .use(repertoireController(addSongUseCase, getRepertoireUseCase, toggleAvailabilityUseCase))
       .use(metricsController(getArtistMetricsUseCase))
+      .use(artistProfileController(getArtistProfileUseCase, updateArtistProfileUseCase))
       .use(paymentAccountController(
         startPaymentConnectionUseCase,
         completePaymentConnectionUseCase,
