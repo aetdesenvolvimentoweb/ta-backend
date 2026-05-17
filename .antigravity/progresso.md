@@ -1,7 +1,7 @@
 # Progresso do Projeto - Toque Aquela
 
-## Última Atualização: 2026-05-15
-**Status Atual**: Backend **100% completo** — arquitetura hexagonal, 23 use cases, 18 rotas, segurança OWASP, **Entrega B de Pagamentos concluída** (cobrança PIX com split nativo 85/15, estorno automático, webhook com validação HMAC). Próximo milestone: Frontend MVP (Vite + React).
+## Última Atualização: 2026-05-17
+**Status Atual**: Backend **100% completo** — arquitetura hexagonal, 23 use cases, 18 rotas, segurança OWASP, **Entrega B de Pagamentos concluída** (cobrança PIX com split nativo 85/15, estorno automático, webhook com validação HMAC). Infra de produção estabilizada (Neon HTTP driver + UptimeRobot). Próximo milestone: `/admin` (último stub do frontend).
 
 ---
 
@@ -29,6 +29,7 @@
 #### Infraestrutura
 - Drizzle ORM com PostgreSQL (schema + migrations).
 - Repositórios Drizzle: `Artist` (com colunas de pagamento + tokens encriptados), `Show`, `Song`, `Style`, `MusicRequest` (com bloco payment), `AdminWhitelist` (env-backed), **`PaymentCredentials`** (port isolado, cifra/decifra tokens em trânsito).
+- **Driver de banco dual-mode**: `@neondatabase/serverless` HTTP em produção (URL `.neon.tech`) — sem pool persistente, sem conexões obsoletas quando o Neon pausa. `postgres-js` em dev/testes (localhost).
 - `PinoLogger`, `BunPasswordHasher`.
 - **`infra/config/env.ts`**: fail-fast bootstrap — exige `DATABASE_URL`, `JWT_SECRET` (≥32c), `COOKIE_SECRET` (≥32c), **`PAYMENT_TOKEN_KEY`** (hex 64 chars).
 - **`BasicProfanityFilter`** (PT-BR, stems + normalização sem acentos) — testado.
@@ -65,7 +66,7 @@
 
 #### Testes e Qualidade
 - **114 testes passando, 0 falhas** (26 arquivos) — unit + VO + filtro + cipher + PKCE + state store + adapter MP (OAuth + PIX + estorno + fetchStatus) + use cases de conexão e pagamento + integração.
-- `bun tsc --noEmit` → **0 erros** (TypeScript strict + `verbatimModuleSyntax`).
+- `bun tsc --noEmit` → **0 erros** (TypeScript strict + `verbatimModuleSyntax`). `MockStyleRepo` corrigido (`findByIds` adicionado).
 - DB sincronizado (`bun db:push` e `bun db:push:test`) com as novas colunas de pagamento.
 
 ---
@@ -87,8 +88,9 @@
 3. **Autenticação Admin Completa (RN12)**
    - OAuth Google + tabela `admin_whitelist` em Postgres (substituir o repo env-backed sem tocar o use case).
 
-4. **Deploy**
-   - Render.com via Docker + GitHub Actions (test → build → deploy).
+4. **Deploy** ✅ (parcial)
+   - Render.com via Docker configurado (`render.yaml`). **UptimeRobot ativo** (ping a cada 5 min — elimina cold starts no free tier).
+   - GitHub Actions (test → build → deploy): pendente.
    - Migração do rate limit in-memory para Redis quando houver >1 instância.
 
 5. **Observabilidade**
