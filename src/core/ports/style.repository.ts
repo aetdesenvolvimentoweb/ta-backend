@@ -13,6 +13,7 @@ export interface IStyleRepository {
   save(style: Style): Promise<void>;
   findAll(): Promise<Style[]>;
   findById(id: string): Promise<Style | null>;
+  findByIds(ids: string[]): Promise<Style[]>;
   findByName(name: string): Promise<Style | null>;
   delete(id: string): Promise<void>;
   /**

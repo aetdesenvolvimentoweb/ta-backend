@@ -43,24 +43,21 @@ export class GetPublicShowUseCase {
     const show = await this.showRepository.findById(showId);
     if (!show) throw new NotFoundError("Show não encontrado.");
 
-    const artist = await this.artistRepository.findById(show.artistId);
+    const [artist, allSongs] = await Promise.all([
+      this.artistRepository.findById(show.artistId),
+      this.songRepository.findByArtistId(show.artistId),
+    ]);
+
     if (!artist) {
       this.logger.error(`Show ${showId} aponta para artista inexistente ${show.artistId}`);
       throw new NotFoundError("Show não encontrado.");
     }
 
-    const allSongs = await this.songRepository.findByArtistId(show.artistId);
     const available = allSongs.filter(s => s.isAvailable);
 
-    // Resolve nomes dos estilos com uma única busca (evita N queries)
     const styleIds = [...new Set(available.map(s => s.styleId).filter(Boolean) as string[])];
-    const stylesMap = new Map<string, string>();
-    await Promise.all(
-      styleIds.map(async id => {
-        const style = await this.styleRepository.findById(id);
-        if (style) stylesMap.set(id, style.name);
-      })
-    );
+    const stylesList = styleIds.length > 0 ? await this.styleRepository.findByIds(styleIds) : [];
+    const stylesMap = new Map(stylesList.map(s => [s.id, s.name]));
 
     return {
       show: { id: show.id, status: show.status },

@@ -13,9 +13,10 @@ if (!connectionString) {
  * O driver 'postgres-js' é altamente performático e compatível com Bun.
  */
 export const client = postgres(connectionString, {
-  max: process.env.NODE_ENV === 'production' ? 20 : 5, // Limita pool em dev/test
+  max: process.env.NODE_ENV === 'production' ? 10 : 5,
   idle_timeout: 20,
   connect_timeout: 10,
+  prepare: false, // Obrigatório para compatibilidade com Neon PgBouncer (connection pooler)
 });
 
 export const db = drizzle(client, { schema });

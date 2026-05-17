@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, integer, boolean, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 
 /**
  * Tabela de Estilos Musicais
@@ -41,7 +41,10 @@ export const shows = pgTable("shows", {
   startTime: timestamp("start_time", { withTimezone: true }).notNull(),
   durationHours: integer("duration_hours").notNull(),
   status: text("status").$type<'active' | 'finished' | 'expired'>().default('active').notNull(),
-});
+}, (t) => [
+  index("idx_shows_artist_id").on(t.artistId),
+  index("idx_shows_status").on(t.status),
+]);
 
 /**
  * Tabela de Repertório (Músicas)
@@ -53,7 +56,10 @@ export const songs = pgTable("songs", {
   originalArtist: text("original_artist").notNull(),
   styleId: uuid("style_id").references(() => styles.id),
   isAvailable: boolean("is_available").default(true).notNull(),
-});
+}, (t) => [
+  index("idx_songs_artist_id").on(t.artistId),
+  index("idx_songs_style_id").on(t.styleId),
+]);
 
 /**
  * Tabela de Pedidos de Música
@@ -77,4 +83,9 @@ export const musicRequests = pgTable("music_requests", {
   paymentGateway: text("payment_gateway").$type<'mercado_pago' | 'stripe' | 'pagarme'>(),
   paymentId: text("payment_id"),
   paymentStatus: text("payment_status").$type<'pending' | 'approved' | 'rejected' | 'refunded'>(),
-});
+}, (t) => [
+  index("idx_music_requests_show_id").on(t.showId),
+  index("idx_music_requests_payment_id").on(t.paymentId),
+  index("idx_music_requests_status").on(t.status),
+  index("idx_music_requests_session_show").on(t.customerSessionId, t.showId),
+]);

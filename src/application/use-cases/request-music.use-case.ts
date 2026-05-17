@@ -32,12 +32,15 @@ export class RequestMusicUseCase {
   ) {}
 
   async execute(input: RequestMusicInput): Promise<MusicRequest> {
-    const show = await this.showRepository.findById(input.showId);
+    const [show, song] = await Promise.all([
+      this.showRepository.findById(input.showId),
+      this.songRepository.findById(input.songId),
+    ]);
+
     if (!show || show.status !== 'active' || show.isExpired()) {
       throw new BusinessRuleError("Este show não está aceitando pedidos no momento.");
     }
 
-    const song = await this.songRepository.findById(input.songId);
     if (!song || !song.isAvailable) {
       throw new NotFoundError("Música indisponível no momento.");
     }

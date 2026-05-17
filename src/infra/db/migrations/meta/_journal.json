@@ -15,6 +15,13 @@
       "when": 1778943830054,
       "tag": "0001_smart_hitman",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779025241657,
+      "tag": "0002_classy_captain_britain",
+      "breakpoints": true
     }
   ]
 }

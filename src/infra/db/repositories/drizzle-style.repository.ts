@@ -1,4 +1,4 @@
-import { eq, ilike } from "drizzle-orm";
+import { eq, ilike, inArray } from "drizzle-orm";
 import { db } from "../client";
 import { styles, songs } from "../schema";
 import type { IStyleRepository, Style } from "../../../core/ports/style.repository";
@@ -26,6 +26,11 @@ export class DrizzleStyleRepository implements IStyleRepository {
   async findById(id: string): Promise<Style | null> {
     const [row] = await db.select().from(styles).where(eq(styles.id, id));
     return row || null;
+  }
+
+  async findByIds(ids: string[]): Promise<Style[]> {
+    if (ids.length === 0) return [];
+    return await db.select().from(styles).where(inArray(styles.id, ids));
   }
 
   async findAll(): Promise<Style[]> {
