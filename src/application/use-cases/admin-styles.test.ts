@@ -8,6 +8,7 @@ class MockStyleRepo implements IStyleRepository {
   async findAll() { return this.styles; }
   async findByName(n: string) { return this.styles.find(s => s.name.toLowerCase() === n.toLowerCase()) || null; }
   async findById(id: string) { return this.styles.find(s => s.id === id) || null; }
+  async findByIds(ids: string[]) { return this.styles.filter(s => ids.includes(s.id)); }
   async delete(id: string) { this.styles = this.styles.filter(s => s.id !== id); }
   async mergeStyles(s: string, t: string) { /* Simula o update */ }
 }
