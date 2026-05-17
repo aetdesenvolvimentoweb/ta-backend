@@ -8,6 +8,7 @@ import { ShowDuration } from "../../core/value-objects/show-duration.vo";
 export interface StartShowInput {
   artistId: string;
   durationHours: number;
+  scheduledStartTime?: Date;
 }
 
 /**
@@ -43,10 +44,20 @@ export class StartShowUseCase {
 
     // 3. Criar novo show
     const duration = new ShowDuration(input.durationHours);
+
+    const MAX_SCHEDULE_AHEAD_MS = 24 * 60 * 60 * 1000;
+    let startTime = new Date();
+    if (input.scheduledStartTime) {
+      const diff = input.scheduledStartTime.getTime() - startTime.getTime();
+      if (diff <= 0) throw new BusinessRuleError("O horário de início deve ser no futuro.");
+      if (diff > MAX_SCHEDULE_AHEAD_MS) throw new BusinessRuleError("O show não pode ser agendado com mais de 24 horas de antecedência.");
+      startTime = input.scheduledStartTime;
+    }
+
     const show = new Show(
       crypto.randomUUID(),
       input.artistId,
-      new Date(),
+      startTime,
       duration,
       'active'
     );

@@ -41,6 +41,10 @@ export class RequestMusicUseCase {
       throw new BusinessRuleError("Este show não está aceitando pedidos no momento.");
     }
 
+    if (new Date() < show.startTime) {
+      throw new BusinessRuleError("Este show ainda não começou. Aguarde o início para fazer pedidos.");
+    }
+
     if (!song || !song.isAvailable) {
       throw new NotFoundError("Música indisponível no momento.");
     }

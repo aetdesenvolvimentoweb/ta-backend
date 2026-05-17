@@ -16,6 +16,7 @@ export interface PublicShowResult {
   show: {
     id: string;
     status: string;
+    startTime: string;
   };
   artist: {
     id: string;
@@ -60,7 +61,7 @@ export class GetPublicShowUseCase {
     const stylesMap = new Map(stylesList.map(s => [s.id, s.name]));
 
     return {
-      show: { id: show.id, status: show.status },
+      show: { id: show.id, status: show.status, startTime: show.startTime.toISOString() },
       artist: {
         id: artist.id,
         name: artist.name,

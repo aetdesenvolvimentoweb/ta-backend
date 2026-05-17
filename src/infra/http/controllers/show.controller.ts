@@ -40,8 +40,9 @@ export const showController = (
       const artistId = await getArtistId();
 
       const show = await startShowUseCase.execute({
-        ...body,
-        artistId
+        artistId,
+        durationHours: body.durationHours,
+        scheduledStartTime: body.scheduledStartTime ? new Date(body.scheduledStartTime) : undefined,
       });
 
       return {
@@ -53,7 +54,8 @@ export const showController = (
       };
     }, {
       body: t.Object({
-        durationHours: t.Integer({ minimum: 1, maximum: 24 })
+        durationHours: t.Integer({ minimum: 1, maximum: 24 }),
+        scheduledStartTime: t.Optional(t.String()),
       }),
       detail: {
         summary: "Iniciar um novo show",
