@@ -13,6 +13,17 @@ export const adminController = (
   new Elysia({ prefix: "/admin" })
     .use(adminMiddleware(validateWhitelist))
 
+    .get("/me", async ({ ensureAdmin }) => {
+      await ensureAdmin();
+      return { isAdmin: true };
+    }, {
+      detail: {
+        summary: "Verifica se o usuário autenticado é admin (RN12)",
+        tags: ["Admin"],
+        security: [{ bearerAuth: [] }]
+      }
+    })
+
     .get("/metrics", async ({ ensureAdmin }) => {
       await ensureAdmin();
       return await getAppMetrics.execute();
