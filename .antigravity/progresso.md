@@ -1,7 +1,7 @@
 # Progresso do Projeto - Toque Aquela
 
-## Última Atualização: 2026-05-17
-**Status Atual**: Backend **100% completo** — arquitetura hexagonal, 23 use cases, 18 rotas, segurança OWASP, **Entrega B de Pagamentos concluída** (cobrança PIX com split nativo 85/15, estorno automático, webhook com validação HMAC). Infra de produção estabilizada (Neon HTTP driver + UptimeRobot). Próximo milestone: `/admin` (último stub do frontend).
+## Última Atualização: 2026-05-22
+**Status Atual**: Backend **100% completo** — arquitetura hexagonal, 23 use cases, 19 rotas, segurança OWASP, Entrega B de Pagamentos concluída, tooling de qualidade implantado (Biome + Lefthook + commitlint). Frontend também 100% completo. Projeto em fase de **hardening pré-launch** (E2E manual + observabilidade).
 
 ---
 
@@ -62,40 +62,38 @@
 - `GET /v1/payment-accounts/callback` *(público — identidade provada pelo state)*
 - `DELETE /v1/payment-accounts/:gateway` *(JWT — desconecta a conta)*
 - **`POST /v1/webhooks/mercado-pago`** *(público — autenticado via HMAC-SHA256; fonte autoritativa de status de pagamento)*
+- `GET /v1/admin/me` *(JWT + whitelist — probe leve para redirect pós-login no frontend)*
 - `GET /v1/admin/metrics`, `POST /v1/admin/styles`, `POST /v1/admin/styles/merge` *(JWT + whitelist)*
 
 #### Testes e Qualidade
 - **114 testes passando, 0 falhas** (26 arquivos) — unit + VO + filtro + cipher + PKCE + state store + adapter MP (OAuth + PIX + estorno + fetchStatus) + use cases de conexão e pagamento + integração.
 - `bun tsc --noEmit` → **0 erros** (TypeScript strict + `verbatimModuleSyntax`). `MockStyleRepo` corrigido (`findByIds` adicionado).
 - DB sincronizado (`bun db:push` e `bun db:push:test`) com as novas colunas de pagamento.
+- **Tooling de qualidade (Biome + Lefthook + commitlint):** Biome v2 (linting + formatting + organizeImports + noUnusedImports, aspas duplas, semicolons); Lefthook executa `tsc + biome --write` em paralelo no pre-commit e valida mensagem com commitlint no commit-msg. Commits no formato `tipo(escopo): descrição` são obrigatórios.
 
 ---
 
 ### Em Aberto / Próximos Passos 🚀
 
-1. **Validação ponta a ponta (manual)**
+1. **Validação ponta a ponta (manual)** — Milestone 4
    - Subir o server com credenciais Mercado Pago de teste (`TESTUSER`).
    - Fluxo: artista autenticar → OAuth Connect → cliente pedir música com gorjeta → escanear PIX QR → webhook MP atualizar status → artista cancelar → verificar estorno automático.
    - Configurar `MP_WEBHOOK_SECRET` no painel do Mercado Pago (Configurações → Webhooks).
 
-2. **Frontend (Vite + React)**
-   - Página pública (QR Code) — repertório + pedido (cookie de sessão).
-   - Painel do artista (login, lista de pedidos em tempo real, mark-as-played).
-   - **Onboarding de pagamento** ao criar primeiro show (CTA "Conectar Mercado Pago" — RN15).
-   - Gerenciamento de repertório.
-   - Painel admin (whitelist + métricas globais).
+2. **Observabilidade** — Milestone 5
+   - Health check expandido (`/health` com checagem de DB via `SELECT 1`).
+   - Métricas RED (rate, errors, duration) via Pino structured logs.
 
-3. **Autenticação Admin Completa (RN12)**
-   - OAuth Google + tabela `admin_whitelist` em Postgres (substituir o repo env-backed sem tocar o use case).
+3. **Acessibilidade (a11y) — Backlog frontend**
+   - 46 warnings Biome no frontend (labels sem `htmlFor`, botões sem `type`, SVGs sem título, `autoFocus`).
+   - `useButtonType` é funcional: botões sem `type` dentro de `<form>` fazem submit inesperado — prioridade média.
+   - Demais são semântica para screen readers — prioridade baixa antes do launch.
 
-4. **Deploy** ✅ (parcial)
-   - Render.com via Docker configurado (`render.yaml`). **UptimeRobot ativo** (ping a cada 5 min — elimina cold starts no free tier).
-   - GitHub Actions (test → build → deploy): pendente.
-   - Migração do rate limit in-memory para Redis quando houver >1 instância.
-
-5. **Observabilidade**
-   - Health check expandido (`/health` com checagem de DB).
-   - Métricas (RED) + tracing.
+4. **Itens descartados / adiados para pós-MVP**
+   - Admin auth via OAuth Google (RN12): whitelist env-backed no Render é suficiente para o MVP. Substituir o repositório é trivial (arquitetura hexagonal) quando necessário.
+   - CI/CD via GitHub Actions: Render auto-deploys no push; Cloudflare Pages tem Actions próprio. Não há lacuna crítica.
+   - Rate limit Redis: necessário apenas com >1 instância.
+   - Tracing distribuído: backlog pós-launch.
 
 ---
 
