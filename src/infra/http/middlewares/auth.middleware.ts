@@ -1,5 +1,5 @@
-import { Elysia } from "elysia";
 import { jwt } from "@elysiajs/jwt";
+import { Elysia } from "elysia";
 import { UnauthorizedError } from "../../../core/errors/app-error";
 
 /**
@@ -9,19 +9,17 @@ import { UnauthorizedError } from "../../../core/errors/app-error";
 export const authMiddleware = new Elysia()
   .use(
     jwt({
-      name: 'jwt',
-      secret: process.env.JWT_SECRET!
+      name: "jwt",
+      secret: process.env.JWT_SECRET!,
     })
   )
-  .derive({ as: 'global' }, ({ jwt, headers: { authorization } }) => ({
+  .derive({ as: "global" }, ({ jwt, headers: { authorization } }) => ({
     getArtistId: async () => {
       if (!authorization) {
         throw new UnauthorizedError("Token não fornecido.");
       }
 
-      const token = authorization.startsWith("Bearer ")
-        ? authorization.slice(7)
-        : authorization;
+      const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : authorization;
 
       const payload = await jwt.verify(token);
 
@@ -30,5 +28,5 @@ export const authMiddleware = new Elysia()
       }
 
       return payload.sub as string;
-    }
+    },
   }));

@@ -1,8 +1,8 @@
 import { Song } from "../../core/entities/song.entity";
 import { NotFoundError, UnauthorizedError } from "../../core/errors/app-error";
+import type { ILogger } from "../../core/ports/logger.port";
 import type { ISongRepository } from "../../core/ports/song.repository";
 import type { IStyleRepository } from "../../core/ports/style.repository";
-import type { ILogger } from "../../core/ports/logger.port";
 
 /**
  * Caso de Uso: Listar o repertório de um artista.
@@ -40,7 +40,7 @@ export class AddSongUseCase {
   async execute(input: AddSongInput): Promise<Song> {
     // 1. Verificar/Buscar o estilo musical
     let style = await this.styleRepository.findByName(input.styleName);
-    
+
     if (!style) {
       this.logger.info(`Novo estilo sugerido por artista: ${input.styleName}`);
       // Se não existe, cria um novo (Admin receberá notificação futuramente - RN10)
@@ -86,7 +86,8 @@ export class ToggleSongAvailabilityUseCase {
     }
     if (song.artistId !== input.artistId) {
       this.logger.warn(`Tentativa de alterar música de outro artista`, {
-        songId: input.songId, attemptedBy: input.artistId
+        songId: input.songId,
+        attemptedBy: input.artistId,
       });
       throw new UnauthorizedError("Você não tem permissão para alterar esta música.");
     }

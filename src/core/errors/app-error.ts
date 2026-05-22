@@ -17,7 +17,7 @@ export abstract class AppError extends Error {
  * Erro para violações de regras de negócio (HTTP 400).
  */
 export class BusinessRuleError extends AppError {
-  public readonly code = 'BUSINESS_RULE_VIOLATION';
+  public readonly code = "BUSINESS_RULE_VIOLATION";
   public readonly statusCode = 400;
 }
 
@@ -25,7 +25,7 @@ export class BusinessRuleError extends AppError {
  * Erro para recursos não encontrados (HTTP 404).
  */
 export class NotFoundError extends AppError {
-  public readonly code = 'NOT_FOUND';
+  public readonly code = "NOT_FOUND";
   public readonly statusCode = 404;
 }
 
@@ -33,6 +33,6 @@ export class NotFoundError extends AppError {
  * Erro para falhas de autenticação (HTTP 401).
  */
 export class UnauthorizedError extends AppError {
-  public readonly code = 'UNAUTHORIZED';
+  public readonly code = "UNAUTHORIZED";
   public readonly statusCode = 401;
 }

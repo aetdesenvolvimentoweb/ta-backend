@@ -1,6 +1,6 @@
+import type { TipPaymentStatus } from "../ports/payment-gateway.port";
 import { Money } from "../value-objects/money.vo";
 import type { PaymentGatewayName } from "../value-objects/payment-account.vo";
-import type { TipPaymentStatus } from "../ports/payment-gateway.port";
 
 /**
  * Snapshot do pagamento associado a um pedido com gorjeta (RN16/RN18).
@@ -24,17 +24,17 @@ export class MusicRequest {
     public readonly customerSessionId: string | null = null,
     public message: string | null = null,
     public tip: Money = new Money(0),
-    public status: 'pending' | 'played' | 'cancelled' | 'refunded' = 'pending',
+    public status: "pending" | "played" | "cancelled" | "refunded" = "pending",
     public readonly createdAt: Date = new Date(),
     public payment: RequestPayment | null = null
   ) {}
 
   markAsPlayed(): void {
-    this.status = 'played';
+    this.status = "played";
   }
 
   cancel(): void {
-    this.status = 'cancelled';
+    this.status = "cancelled";
   }
 
   attachPayment(payment: RequestPayment): void {
@@ -44,6 +44,6 @@ export class MusicRequest {
   markPaymentStatus(status: TipPaymentStatus): void {
     if (!this.payment) return;
     this.payment = { ...this.payment, status };
-    if (status === 'refunded') this.status = 'refunded';
+    if (status === "refunded") this.status = "refunded";
   }
 }

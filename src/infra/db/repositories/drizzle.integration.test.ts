@@ -1,24 +1,24 @@
-import { expect, test, describe, beforeAll, beforeEach, afterAll } from "bun:test";
-import { db, closeDb } from "../client";
-import { artists, shows, songs, styles, musicRequests } from "../schema";
+import { afterAll, beforeEach, describe, expect, test } from "bun:test";
+import { sql } from "drizzle-orm";
+import { Artist } from "../../../core/entities/artist.entity";
+import { Show } from "../../../core/entities/show.entity";
+import { Email } from "../../../core/value-objects/email.vo";
+import { ShowDuration } from "../../../core/value-objects/show-duration.vo";
+import { closeDb, db } from "../client";
 import { DrizzleArtistRepository } from "./drizzle-artist.repository";
 import { DrizzleShowRepository } from "./drizzle-show.repository";
-import { Artist } from "../../../core/entities/artist.entity";
-import { Email } from "../../../core/value-objects/email.vo";
-import { Show } from "../../../core/entities/show.entity";
-import { ShowDuration } from "../../../core/value-objects/show-duration.vo";
-import { sql } from "drizzle-orm";
 
 /**
  * Testes de Integração para Repositórios Drizzle.
  * Estes testes rodam contra um banco PostgreSQL REAL (definido em .env.test).
  */
 describe("Drizzle Repositories Integration", () => {
-
   // Limpeza do banco antes de cada teste para garantir isolação absoluta
   beforeEach(async () => {
     // Ordem inversa das foreign keys
-    await db.execute(sql`TRUNCATE TABLE music_requests, songs, shows, artists, styles RESTART IDENTITY CASCADE`);
+    await db.execute(
+      sql`TRUNCATE TABLE music_requests, songs, shows, artists, styles RESTART IDENTITY CASCADE`
+    );
   });
 
   afterAll(async () => {
@@ -46,20 +46,25 @@ describe("Drizzle Repositories Integration", () => {
 
     // Show que começou há 5 horas e durava 4h (já expirado)
     const startTime = new Date(Date.now() - 5 * 60 * 60 * 1000);
-    const show = new Show(crypto.randomUUID(), artist.id, startTime, new ShowDuration(4), 'active');
-    
+    const show = new Show(crypto.randomUUID(), artist.id, startTime, new ShowDuration(4), "active");
+
     await showRepo.save(show);
 
     // Rodar a lógica de expiração nativa do SQL
     await showRepo.markExpiredShows();
 
     const updated = await showRepo.findById(show.id);
-    expect(updated?.status).toBe('expired');
+    expect(updated?.status).toBe("expired");
   });
 
   test("deve encontrar artista por e-mail", async () => {
     const repo = new DrizzleArtistRepository();
-    const artist = new Artist(crypto.randomUUID(), "Email Artist", new Email("email@test.com"), "hash123");
+    const artist = new Artist(
+      crypto.randomUUID(),
+      "Email Artist",
+      new Email("email@test.com"),
+      "hash123"
+    );
 
     await repo.save(artist);
 
@@ -87,16 +92,26 @@ describe("Drizzle Repositories Integration", () => {
     const artistRepo = new DrizzleArtistRepository();
     const showRepo = new DrizzleShowRepository();
 
-    const artist = new Artist(crypto.randomUUID(), "Active Show Artist", new Email("active@test.com"));
+    const artist = new Artist(
+      crypto.randomUUID(),
+      "Active Show Artist",
+      new Email("active@test.com")
+    );
     await artistRepo.save(artist);
 
-    const show = new Show(crypto.randomUUID(), artist.id, new Date(), new ShowDuration(4), 'active');
+    const show = new Show(
+      crypto.randomUUID(),
+      artist.id,
+      new Date(),
+      new ShowDuration(4),
+      "active"
+    );
     await showRepo.save(show);
 
     const found = await showRepo.findActiveByArtistId(artist.id);
     expect(found).not.toBeNull();
     expect(found?.id).toBe(show.id);
-    expect(found?.status).toBe('active');
+    expect(found?.status).toBe("active");
 
     // Artista sem show ativo retorna null
     const notFound = await showRepo.findActiveByArtistId(crypto.randomUUID());
@@ -110,8 +125,12 @@ describe("Drizzle Repositories Integration", () => {
     const artist = new Artist(crypto.randomUUID(), "List Artist", new Email("list@test.com"));
     await artistRepo.save(artist);
 
-    await showRepo.save(new Show(crypto.randomUUID(), artist.id, new Date(), new ShowDuration(4), 'active'));
-    await showRepo.save(new Show(crypto.randomUUID(), artist.id, new Date(), new ShowDuration(4), 'finished'));
+    await showRepo.save(
+      new Show(crypto.randomUUID(), artist.id, new Date(), new ShowDuration(4), "active")
+    );
+    await showRepo.save(
+      new Show(crypto.randomUUID(), artist.id, new Date(), new ShowDuration(4), "finished")
+    );
 
     const all = await showRepo.findAll();
     expect(all.length).toBe(2);

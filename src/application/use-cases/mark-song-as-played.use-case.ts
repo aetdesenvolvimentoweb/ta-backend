@@ -1,7 +1,7 @@
+import { NotFoundError, UnauthorizedError } from "../../core/errors/app-error";
+import type { ILogger } from "../../core/ports/logger.port";
 import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
 import type { IShowRepository } from "../../core/ports/show.repository";
-import type { ILogger } from "../../core/ports/logger.port";
-import { NotFoundError, UnauthorizedError } from "../../core/errors/app-error";
 
 export interface MarkSongAsPlayedInput {
   showId: string;
@@ -27,12 +27,13 @@ export class MarkSongAsPlayedUseCase {
     }
     if (show.artistId !== input.artistId) {
       this.logger.warn(`Tentativa de marcar música como tocada em show de outro artista`, {
-        showId: input.showId, attemptedBy: input.artistId
+        showId: input.showId,
+        attemptedBy: input.artistId,
       });
       throw new UnauthorizedError("Você não tem permissão para alterar este show.");
     }
 
-    await this.requestRepository.updateStatusBySong(input.showId, input.songId, 'played');
+    await this.requestRepository.updateStatusBySong(input.showId, input.songId, "played");
     this.logger.info(`Música ${input.songId} marcada como tocada no show ${input.showId}`);
   }
 }

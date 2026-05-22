@@ -1,15 +1,15 @@
-import { expect, test, describe } from "bun:test";
-import { Artist } from "./artist.entity";
-import { MusicRequest } from "./music-request.entity";
+import { describe, expect, test } from "bun:test";
+import { BusinessRuleError, NotFoundError, UnauthorizedError } from "../errors/app-error";
 import { Email } from "../value-objects/email.vo";
 import { Money } from "../value-objects/money.vo";
 import { PaymentAccount } from "../value-objects/payment-account.vo";
-import { BusinessRuleError, NotFoundError, UnauthorizedError } from "../errors/app-error";
+import { Artist } from "./artist.entity";
+import { MusicRequest } from "./music-request.entity";
 
 describe("Domain Coverage (Edge Cases)", () => {
   test("Artist: deve atualizar socials e status premium", () => {
     const artist = new Artist("1", "João", new Email("joao@teste.com"));
-    
+
     artist.updateSocials({ instagram: "@joao" });
     expect(artist.socials.instagram).toBe("@joao");
 
@@ -21,27 +21,27 @@ describe("Domain Coverage (Edge Cases)", () => {
     const request = new MusicRequest("1", "show-1", "song-1", "André");
 
     request.markAsPlayed();
-    expect(request.status).toBe('played');
+    expect(request.status).toBe("played");
 
     request.cancel();
-    expect(request.status).toBe('cancelled');
+    expect(request.status).toBe("cancelled");
   });
 
   test("MusicRequest: attachPayment + markPaymentStatus refunded propaga para status do pedido (RN18)", () => {
     const request = new MusicRequest("1", "show-1", "song-1", "André");
-    request.attachPayment({ gateway: 'mercado_pago', paymentId: 'mp-1', status: 'approved' });
-    expect(request.payment?.status).toBe('approved');
+    request.attachPayment({ gateway: "mercado_pago", paymentId: "mp-1", status: "approved" });
+    expect(request.payment?.status).toBe("approved");
 
-    request.markPaymentStatus('refunded');
-    expect(request.payment?.status).toBe('refunded');
-    expect(request.status).toBe('refunded');
+    request.markPaymentStatus("refunded");
+    expect(request.payment?.status).toBe("refunded");
+    expect(request.status).toBe("refunded");
   });
 
   test("Artist: canReceiveTips reflete conexão de conta (RN15)", () => {
     const artist = new Artist("1", "João", new Email("joao@teste.com"));
     expect(artist.canReceiveTips()).toBe(false);
 
-    artist.connectPaymentAccount(new PaymentAccount('mercado_pago', 'mp-1'));
+    artist.connectPaymentAccount(new PaymentAccount("mercado_pago", "mp-1"));
     expect(artist.canReceiveTips()).toBe(true);
 
     artist.disconnectPaymentAccount();
@@ -51,7 +51,7 @@ describe("Domain Coverage (Edge Cases)", () => {
   test("Money: deve subtrair valores e validar inteiros", () => {
     const m1 = new Money(1000);
     const m2 = new Money(400);
-    
+
     const result = m1.subtract(m2);
     expect(result.amountInCents).toBe(600);
 

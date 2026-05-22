@@ -1,6 +1,6 @@
 import { BusinessRuleError, NotFoundError } from "../../core/errors/app-error";
-import type { IStyleRepository, Style } from "../../core/ports/style.repository";
 import type { ILogger } from "../../core/ports/logger.port";
+import type { IStyleRepository, Style } from "../../core/ports/style.repository";
 
 /**
  * Caso de Uso: Listar estilos musicais disponíveis (público).
@@ -35,7 +35,7 @@ export class CreateStyleUseCase {
 
     const style: Style = {
       id: crypto.randomUUID(),
-      name: name.trim()
+      name: name.trim(),
     };
 
     await this.styleRepository.save(style);

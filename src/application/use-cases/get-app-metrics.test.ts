@@ -1,11 +1,17 @@
-import { expect, test, describe } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { GetAppMetricsUseCase } from "./get-app-metrics.use-case";
 
 class MockRequestRepo {
   async save() {}
-  async findById() { return null; }
-  async findByShowId() { return []; }
-  async countFreeRequestsByCustomer() { return 0; }
+  async findById() {
+    return null;
+  }
+  async findByShowId() {
+    return [];
+  }
+  async countFreeRequestsByCustomer() {
+    return 0;
+  }
   async updateStatusBySong() {}
   async aggregateAppMetrics() {
     return {
@@ -14,7 +20,9 @@ class MockRequestRepo {
       topArtistsByRevenue: [{ name: "Banda X", revenueCents: 60_000 }],
     };
   }
-  async aggregateArtistMetrics() { return { totalEarnedCents: 0, totalRequestsPlayed: 0 }; }
+  async aggregateArtistMetrics() {
+    return { totalEarnedCents: 0, totalRequestsPlayed: 0 };
+  }
 }
 
 const mockLogger = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
@@ -31,8 +39,8 @@ describe("GetAppMetrics Use Case", () => {
     const metrics = await useCase.execute();
 
     expect(metrics.totalVolumeTransacted).toBe(1000); // R$ 1.000,00
-    expect(metrics.totalAppRevenue).toBe(150);        // 15%
-    expect(metrics.totalArtistsRevenue).toBe(850);    // 85%
+    expect(metrics.totalAppRevenue).toBe(150); // 15%
+    expect(metrics.totalArtistsRevenue).toBe(850); // 85%
     expect(metrics.appCommissionPercent).toBe(0.15);
     expect(metrics.topSongsByRequestCount[0]?.title).toBe("Evidências");
     expect(metrics.topArtistsByRevenue[0]?.revenue).toBe(600);

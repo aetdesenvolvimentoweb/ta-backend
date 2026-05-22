@@ -14,7 +14,7 @@ export class Money {
     if (amountInCents < 0) {
       throw new BusinessRuleError("O valor monetário não pode ser negativo.");
     }
-    
+
     if (!Number.isInteger(amountInCents)) {
       throw new BusinessRuleError("O valor em centavos deve ser um número inteiro.");
     }
@@ -30,7 +30,7 @@ export class Money {
 
   /**
    * Soma outro valor monetário.
-   * @param {Money} other 
+   * @param {Money} other
    * @returns {Money}
    */
   add(other: Money): Money {
@@ -39,7 +39,7 @@ export class Money {
 
   /**
    * Subtrai outro valor monetário.
-   * @param {Money} other 
+   * @param {Money} other
    * @returns {Money}
    */
   subtract(other: Money): Money {

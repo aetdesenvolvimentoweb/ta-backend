@@ -1,22 +1,26 @@
-import { expect, test, describe } from "bun:test";
-import { StartShowUseCase } from "./start-show.use-case";
-import { Show } from "../../core/entities/show.entity";
+import { describe, expect, test } from "bun:test";
 import { Artist } from "../../core/entities/artist.entity";
+import { Show } from "../../core/entities/show.entity";
 import { Email } from "../../core/value-objects/email.vo";
 import { ShowDuration } from "../../core/value-objects/show-duration.vo";
+import { StartShowUseCase } from "./start-show.use-case";
 
 class InMemoryShowRepository {
   private shows: Show[] = [];
   async save(show: Show): Promise<void> {
-    const index = this.shows.findIndex(s => s.id === show.id);
+    const index = this.shows.findIndex((s) => s.id === show.id);
     if (index >= 0) this.shows[index] = show;
     else this.shows.push(show);
   }
   async findActiveByArtistId(artistId: string): Promise<Show | null> {
-    return this.shows.find(s => s.artistId === artistId && s.status === 'active') || null;
+    return this.shows.find((s) => s.artistId === artistId && s.status === "active") || null;
   }
-  async findById(id: string): Promise<Show | null> { return null; }
-  async findAll(): Promise<Show[]> { return []; }
+  async findById(id: string): Promise<Show | null> {
+    return null;
+  }
+  async findAll(): Promise<Show[]> {
+    return [];
+  }
   async markExpiredShows(): Promise<void> {}
 }
 
@@ -26,7 +30,9 @@ class InMemoryArtistRepository {
     return null;
   }
   async save(artist: Artist): Promise<void> {}
-  async findByEmail(email: string): Promise<Artist | null> { return null; }
+  async findByEmail(email: string): Promise<Artist | null> {
+    return null;
+  }
   async delete(id: string): Promise<void> {}
 }
 
@@ -40,7 +46,7 @@ describe("StartShow Use Case", () => {
 
     const show = await useCase.execute({ artistId: "artist-1", durationHours: 4 });
 
-    expect(show.status).toBe('active');
+    expect(show.status).toBe("active");
     expect(show.artistId).toBe("artist-1");
   });
 
@@ -50,9 +56,10 @@ describe("StartShow Use Case", () => {
     const useCase = new StartShowUseCase(showRepo as any, artistRepo as any, mockLogger as any);
 
     await useCase.execute({ artistId: "artist-1", durationHours: 4 });
-    
-    await expect(useCase.execute({ artistId: "artist-1", durationHours: 4 }))
-      .rejects.toThrow("já possui um show ativo");
+
+    await expect(useCase.execute({ artistId: "artist-1", durationHours: 4 })).rejects.toThrow(
+      "já possui um show ativo"
+    );
   });
 
   test("deve permitir novo show se o anterior estiver expirado", async () => {
@@ -62,15 +69,15 @@ describe("StartShow Use Case", () => {
 
     // Criar um show que começou há 10 horas com duração de 4h (já expirado)
     const expiredShow = new Show(
-      "old-id", 
-      "artist-1", 
-      new Date(Date.now() - 10 * 60 * 60 * 1000), 
+      "old-id",
+      "artist-1",
+      new Date(Date.now() - 10 * 60 * 60 * 1000),
       new ShowDuration(4)
     );
     await showRepo.save(expiredShow);
 
     const newShow = await useCase.execute({ artistId: "artist-1", durationHours: 4 });
     expect(newShow.id).not.toBe(expiredShow.id);
-    expect(newShow.status).toBe('active');
+    expect(newShow.status).toBe("active");
   });
 });

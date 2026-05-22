@@ -1,4 +1,4 @@
-import { expect, test, describe } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { deriveCodeChallenge, generateCodeVerifier, generateOAuthState } from "./pkce";
 
 describe("PKCE helpers", () => {
@@ -16,8 +16,8 @@ describe("PKCE helpers", () => {
   });
 
   test("deriveCodeChallenge: deve ser determinístico (SHA-256)", async () => {
-    const verifier = 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk'; // exemplo RFC 7636
+    const verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"; // exemplo RFC 7636
     const challenge = await deriveCodeChallenge(verifier);
-    expect(challenge).toBe('E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM');
+    expect(challenge).toBe("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
   });
 });

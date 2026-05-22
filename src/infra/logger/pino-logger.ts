@@ -1,5 +1,5 @@
-import pino from "pino";
 import type { Logger as PinoInstance } from "pino";
+import pino from "pino";
 import type { ILogger } from "../../core/ports/logger.port";
 
 /**
@@ -12,16 +12,17 @@ export class PinoLogger implements ILogger {
   constructor() {
     this.logger = pino({
       level: process.env.LOG_LEVEL || "info",
-      transport: process.env.NODE_ENV !== "production" 
-        ? {
-            target: "pino-pretty",
-            options: {
-              colorize: true,
-              translateTime: "HH:MM:ss Z",
-              ignore: "pid,hostname",
-            },
-          }
-        : undefined,
+      transport:
+        process.env.NODE_ENV !== "production"
+          ? {
+              target: "pino-pretty",
+              options: {
+                colorize: true,
+                translateTime: "HH:MM:ss Z",
+                ignore: "pid,hostname",
+              },
+            }
+          : undefined,
     });
   }
 

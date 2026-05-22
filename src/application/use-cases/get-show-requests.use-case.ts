@@ -1,8 +1,8 @@
-import { MusicRequest } from "../../core/entities/music-request.entity";
+import type { MusicRequest } from "../../core/entities/music-request.entity";
+import { NotFoundError, UnauthorizedError } from "../../core/errors/app-error";
+import type { ILogger } from "../../core/ports/logger.port";
 import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
 import type { IShowRepository } from "../../core/ports/show.repository";
-import type { ILogger } from "../../core/ports/logger.port";
-import { NotFoundError, UnauthorizedError } from "../../core/errors/app-error";
 
 export interface GetShowRequestsInput {
   showId: string;
@@ -27,7 +27,8 @@ export class GetShowRequestsUseCase {
     }
     if (show.artistId !== input.artistId) {
       this.logger.warn(`Tentativa de listar pedidos de show de outro artista`, {
-        showId: input.showId, attemptedBy: input.artistId
+        showId: input.showId,
+        attemptedBy: input.artistId,
       });
       throw new UnauthorizedError("Você não tem permissão para visualizar este show.");
     }

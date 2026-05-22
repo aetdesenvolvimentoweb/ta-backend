@@ -91,9 +91,7 @@
         "artists_email_unique": {
           "name": "artists_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -187,12 +185,8 @@
           "name": "music_requests_show_id_shows_id_fk",
           "tableFrom": "music_requests",
           "tableTo": "shows",
-          "columnsFrom": [
-            "show_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["show_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -200,12 +194,8 @@
           "name": "music_requests_song_id_songs_id_fk",
           "tableFrom": "music_requests",
           "tableTo": "songs",
-          "columnsFrom": [
-            "song_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["song_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -259,12 +249,8 @@
           "name": "shows_artist_id_artists_id_fk",
           "tableFrom": "shows",
           "tableTo": "artists",
-          "columnsFrom": [
-            "artist_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["artist_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -324,12 +310,8 @@
           "name": "songs_artist_id_artists_id_fk",
           "tableFrom": "songs",
           "tableTo": "artists",
-          "columnsFrom": [
-            "artist_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["artist_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -337,12 +319,8 @@
           "name": "songs_style_id_styles_id_fk",
           "tableFrom": "songs",
           "tableTo": "styles",
-          "columnsFrom": [
-            "style_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["style_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -378,9 +356,7 @@
         "styles_name_unique": {
           "name": "styles_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         }
       },
       "policies": {},

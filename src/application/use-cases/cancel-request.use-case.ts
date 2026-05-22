@@ -1,7 +1,7 @@
+import { BusinessRuleError, NotFoundError, UnauthorizedError } from "../../core/errors/app-error";
+import type { ILogger } from "../../core/ports/logger.port";
 import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
 import type { IShowRepository } from "../../core/ports/show.repository";
-import type { ILogger } from "../../core/ports/logger.port";
-import { NotFoundError, BusinessRuleError, UnauthorizedError } from "../../core/errors/app-error";
 import type { RefundTipPaymentUseCase } from "./tip-payment.use-case";
 
 export interface CancelMusicRequestInput {
@@ -19,7 +19,7 @@ export class CancelMusicRequestUseCase {
     private requestRepository: IMusicRequestRepository,
     private showRepository: IShowRepository,
     private logger: ILogger,
-    private refundTipPaymentUseCase?: RefundTipPaymentUseCase,
+    private refundTipPaymentUseCase?: RefundTipPaymentUseCase
   ) {}
 
   async execute(input: CancelMusicRequestInput): Promise<void> {
@@ -34,16 +34,17 @@ export class CancelMusicRequestUseCase {
     }
     if (show.artistId !== input.artistId) {
       this.logger.warn(`Tentativa de cancelar pedido de outro artista`, {
-        requestId: input.requestId, attemptedBy: input.artistId
+        requestId: input.requestId,
+        attemptedBy: input.artistId,
       });
       throw new UnauthorizedError("Você não tem permissão para cancelar este pedido.");
     }
 
-    if (request.status === 'played') {
+    if (request.status === "played") {
       throw new BusinessRuleError("Não é possível cancelar um pedido que já foi tocado.");
     }
 
-    if (request.payment?.status === 'approved' && this.refundTipPaymentUseCase) {
+    if (request.payment?.status === "approved" && this.refundTipPaymentUseCase) {
       await this.refundTipPaymentUseCase.execute({ musicRequestId: request.id });
     } else {
       request.cancel();

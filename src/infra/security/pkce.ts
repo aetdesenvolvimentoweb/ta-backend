@@ -6,9 +6,9 @@
  */
 
 function bytesToBase64Url(bytes: Uint8Array): string {
-  let bin = '';
+  let bin = "";
   for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 /** code_verifier: 32 bytes aleatórios em base64url (43 chars). */
@@ -19,7 +19,7 @@ export function generateCodeVerifier(): string {
 /** code_challenge = base64url(SHA256(code_verifier)). */
 export async function deriveCodeChallenge(verifier: string): Promise<string> {
   const digest = new Uint8Array(
-    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))
   );
   return bytesToBase64Url(digest);
 }

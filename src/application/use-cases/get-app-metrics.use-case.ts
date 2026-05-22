@@ -1,7 +1,7 @@
-import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
 import type { IArtistRepository } from "../../core/ports/artist.repository";
-import type { ISongRepository } from "../../core/ports/song.repository";
 import type { ILogger } from "../../core/ports/logger.port";
+import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
+import type { ISongRepository } from "../../core/ports/song.repository";
 import { Money } from "../../core/value-objects/money.vo";
 
 export interface AppMetrics {
@@ -44,7 +44,7 @@ export class GetAppMetricsUseCase {
       totalVolumeTransacted: new Money(agg.totalVolumeCents).toReal(),
       appCommissionPercent: APP_COMMISSION_PERCENT,
       topSongsByRequestCount: agg.topSongsByRequestCount,
-      topArtistsByRevenue: agg.topArtistsByRevenue.map(a => ({
+      topArtistsByRevenue: agg.topArtistsByRevenue.map((a) => ({
         name: a.name,
         revenue: new Money(a.revenueCents).toReal(),
       })),

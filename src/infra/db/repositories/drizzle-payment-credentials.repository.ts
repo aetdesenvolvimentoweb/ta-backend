@@ -1,12 +1,12 @@
 import { eq } from "drizzle-orm";
-import { db } from "../client";
-import { artists } from "../schema";
-import { isSupportedGateway } from "../../../core/value-objects/payment-account.vo";
 import type {
   IPaymentCredentialsRepository,
   PaymentCredentials,
 } from "../../../core/ports/payment-credentials.repository";
+import { isSupportedGateway } from "../../../core/value-objects/payment-account.vo";
 import type { ITokenCipher } from "../../security/token-cipher";
+import { db } from "../client";
+import { artists } from "../schema";
 
 /**
  * Persiste tokens OAuth criptografados em repouso (RN17/22).
@@ -21,21 +21,27 @@ export class DrizzlePaymentCredentialsRepository implements IPaymentCredentialsR
       ? await this.cipher.encrypt(credentials.refreshToken)
       : null;
 
-    await db.update(artists).set({
-      paymentGateway: credentials.gateway,
-      paymentAccessTokenEnc: accessEnc,
-      paymentRefreshTokenEnc: refreshEnc,
-      paymentTokenExpiresAt: credentials.expiresAt,
-    }).where(eq(artists.id, credentials.artistId));
+    await db
+      .update(artists)
+      .set({
+        paymentGateway: credentials.gateway,
+        paymentAccessTokenEnc: accessEnc,
+        paymentRefreshTokenEnc: refreshEnc,
+        paymentTokenExpiresAt: credentials.expiresAt,
+      })
+      .where(eq(artists.id, credentials.artistId));
   }
 
   async findByArtistId(artistId: string): Promise<PaymentCredentials | null> {
-    const [row] = await db.select({
-      gateway: artists.paymentGateway,
-      accessEnc: artists.paymentAccessTokenEnc,
-      refreshEnc: artists.paymentRefreshTokenEnc,
-      expiresAt: artists.paymentTokenExpiresAt,
-    }).from(artists).where(eq(artists.id, artistId));
+    const [row] = await db
+      .select({
+        gateway: artists.paymentGateway,
+        accessEnc: artists.paymentAccessTokenEnc,
+        refreshEnc: artists.paymentRefreshTokenEnc,
+        expiresAt: artists.paymentTokenExpiresAt,
+      })
+      .from(artists)
+      .where(eq(artists.id, artistId));
 
     if (!row || !row.gateway || !row.accessEnc || !isSupportedGateway(row.gateway)) {
       return null;
@@ -54,10 +60,13 @@ export class DrizzlePaymentCredentialsRepository implements IPaymentCredentialsR
   }
 
   async deleteByArtistId(artistId: string): Promise<void> {
-    await db.update(artists).set({
-      paymentAccessTokenEnc: null,
-      paymentRefreshTokenEnc: null,
-      paymentTokenExpiresAt: null,
-    }).where(eq(artists.id, artistId));
+    await db
+      .update(artists)
+      .set({
+        paymentAccessTokenEnc: null,
+        paymentRefreshTokenEnc: null,
+        paymentTokenExpiresAt: null,
+      })
+      .where(eq(artists.id, artistId));
   }
 }

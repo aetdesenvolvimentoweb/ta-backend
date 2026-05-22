@@ -1,12 +1,8 @@
 import { BusinessRuleError } from "../errors/app-error";
 
-export type PaymentGatewayName = 'mercado_pago' | 'stripe' | 'pagarme';
+export type PaymentGatewayName = "mercado_pago" | "stripe" | "pagarme";
 
-const SUPPORTED: ReadonlySet<PaymentGatewayName> = new Set([
-  'mercado_pago',
-  'stripe',
-  'pagarme',
-]);
+const SUPPORTED: ReadonlySet<PaymentGatewayName> = new Set(["mercado_pago", "stripe", "pagarme"]);
 
 export function isSupportedGateway(name: string): name is PaymentGatewayName {
   return SUPPORTED.has(name as PaymentGatewayName);
@@ -31,7 +27,9 @@ export class PaymentAccount {
     }
     const trimmed = externalAccountId?.trim();
     if (!trimmed) {
-      throw new BusinessRuleError("externalAccountId é obrigatório para vincular uma conta de pagamento.");
+      throw new BusinessRuleError(
+        "externalAccountId é obrigatório para vincular uma conta de pagamento."
+      );
     }
     this.externalAccountId = trimmed;
   }

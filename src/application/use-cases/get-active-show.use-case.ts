@@ -1,6 +1,6 @@
-import type { IShowRepository } from "../../core/ports/show.repository";
-import type { ILogger } from "../../core/ports/logger.port";
 import type { Show } from "../../core/entities/show.entity";
+import type { ILogger } from "../../core/ports/logger.port";
+import type { IShowRepository } from "../../core/ports/show.repository";
 
 export class GetActiveShowUseCase {
   constructor(

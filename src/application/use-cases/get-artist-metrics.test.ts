@@ -1,24 +1,38 @@
-import { expect, test, describe } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { GetArtistMetricsUseCase } from "./get-artist-metrics.use-case";
 
 class MockRequestRepo {
   constructor(private totals: { totalEarnedCents: number; totalRequestsPlayed: number }) {}
   async save() {}
-  async findById() { return null; }
-  async findByShowId() { return []; }
-  async countFreeRequestsByCustomer() { return 0; }
+  async findById() {
+    return null;
+  }
+  async findByShowId() {
+    return [];
+  }
+  async countFreeRequestsByCustomer() {
+    return 0;
+  }
   async updateStatusBySong() {}
   async aggregateAppMetrics() {
     return { totalVolumeCents: 0, topSongsByRequestCount: [], topArtistsByRevenue: [] };
   }
-  async aggregateArtistMetrics() { return this.totals; }
+  async aggregateArtistMetrics() {
+    return this.totals;
+  }
 }
 
 class MockShowRepo {
-  async findById() { return null; }
+  async findById() {
+    return null;
+  }
   async save() {}
-  async findActiveByArtistId() { return null; }
-  async findAll() { return []; }
+  async findActiveByArtistId() {
+    return null;
+  }
+  async findAll() {
+    return [];
+  }
   async markExpiredShows() {}
 }
 

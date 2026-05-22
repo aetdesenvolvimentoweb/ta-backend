@@ -1,4 +1,4 @@
-import { Email } from "../value-objects/email.vo";
+import type { Email } from "../value-objects/email.vo";
 import type { PaymentAccount } from "../value-objects/payment-account.vo";
 
 /**

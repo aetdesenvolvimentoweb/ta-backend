@@ -1,4 +1,4 @@
-import { Artist } from "../entities/artist.entity";
+import type { Artist } from "../entities/artist.entity";
 
 /**
  * Interface de Repositório para a entidade Artist.

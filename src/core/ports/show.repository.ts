@@ -1,4 +1,4 @@
-import { Show } from "../entities/show.entity";
+import type { Show } from "../entities/show.entity";
 
 /**
  * Interface de Repositório para a entidade Show.

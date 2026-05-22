@@ -1,8 +1,8 @@
-import { expect, test, describe } from "bun:test";
-import { AuthenticateArtistUseCase } from "./authenticate-artist.use-case";
+import { describe, expect, test } from "bun:test";
 import { Artist } from "../../core/entities/artist.entity";
-import { Email } from "../../core/value-objects/email.vo";
 import type { IPasswordHasher } from "../../core/ports/password-hasher.port";
+import { Email } from "../../core/value-objects/email.vo";
+import { AuthenticateArtistUseCase } from "./authenticate-artist.use-case";
 
 class MockArtistRepo {
   async findByEmail(email: string) {
@@ -12,13 +12,19 @@ class MockArtistRepo {
     return null;
   }
   async save() {}
-  async findById() { return null; }
+  async findById() {
+    return null;
+  }
   async delete() {}
 }
 
 class MockHasher implements IPasswordHasher {
-  async hash(p: string) { return "hash_" + p; }
-  async compare(p: string, h: string) { return h === "hash_correta"; }
+  async hash(p: string) {
+    return "hash_" + p;
+  }
+  async compare(p: string, h: string) {
+    return h === "hash_correta";
+  }
 }
 
 const mockLogger = { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} };
@@ -34,7 +40,7 @@ describe("AuthenticateArtist Use Case", () => {
 
     const artist = await useCase.execute({
       email: "artista@show.com",
-      passwordInPlainText: "senha123"
+      passwordInPlainText: "senha123",
     });
 
     expect(artist.name).toBe("João");
@@ -45,10 +51,12 @@ describe("AuthenticateArtist Use Case", () => {
     const hasher = new MockHasher();
     const useCase = new AuthenticateArtistUseCase(repo as any, hasher, mockLogger as any);
 
-    await expect(useCase.execute({
-      email: "inexistente@show.com",
-      passwordInPlainText: "senha123"
-    })).rejects.toThrow("E-mail ou senha inválidos");
+    await expect(
+      useCase.execute({
+        email: "inexistente@show.com",
+        passwordInPlainText: "senha123",
+      })
+    ).rejects.toThrow("E-mail ou senha inválidos");
   });
 
   test("deve falhar se a senha estiver incorreta", async () => {
@@ -59,9 +67,11 @@ describe("AuthenticateArtist Use Case", () => {
     // Mockando senha incorreta
     hasher.compare = async () => false;
 
-    await expect(useCase.execute({
-      email: "artista@show.com",
-      passwordInPlainText: "errada"
-    })).rejects.toThrow("E-mail ou senha inválidos");
+    await expect(
+      useCase.execute({
+        email: "artista@show.com",
+        passwordInPlainText: "errada",
+      })
+    ).rejects.toThrow("E-mail ou senha inválidos");
   });
 });

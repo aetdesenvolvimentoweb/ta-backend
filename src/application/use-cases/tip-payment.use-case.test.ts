@@ -1,12 +1,12 @@
-import { expect, test, describe, mock } from "bun:test";
-import { CreateTipPaymentUseCase, RefundTipPaymentUseCase } from "./tip-payment.use-case";
+import { describe, expect, test } from "bun:test";
+import { Artist } from "../../core/entities/artist.entity";
 import { MusicRequest } from "../../core/entities/music-request.entity";
 import { Show } from "../../core/entities/show.entity";
-import { Artist } from "../../core/entities/artist.entity";
 import { Email } from "../../core/value-objects/email.vo";
 import { Money } from "../../core/value-objects/money.vo";
-import { ShowDuration } from "../../core/value-objects/show-duration.vo";
 import { PaymentAccount } from "../../core/value-objects/payment-account.vo";
+import { ShowDuration } from "../../core/value-objects/show-duration.vo";
+import { CreateTipPaymentUseCase, RefundTipPaymentUseCase } from "./tip-payment.use-case";
 
 const mockLogger = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
 
@@ -20,7 +20,9 @@ function makeShow() {
   return new Show("show-1", "artist-1", new Date(), new ShowDuration(4), "active");
 }
 
-function makeRequestWithTip(paymentStatus?: import("../../core/ports/payment-gateway.port").TipPaymentStatus) {
+function makeRequestWithTip(
+  paymentStatus?: import("../../core/ports/payment-gateway.port").TipPaymentStatus
+) {
   const req = new MusicRequest("req-1", "show-1", "song-1", "João", "sess-1", null, new Money(500));
   if (paymentStatus) {
     req.attachPayment({ gateway: "mercado_pago", paymentId: "pay-99", status: paymentStatus });
@@ -32,47 +34,75 @@ class MockRequestRepo {
   requests = new Map<string, MusicRequest>();
   byPaymentId = new Map<string, MusicRequest>();
 
-  async findById(id: string) { return this.requests.get(id) ?? null; }
-  async findByPaymentId(paymentId: string) { return this.byPaymentId.get(paymentId) ?? null; }
+  async findById(id: string) {
+    return this.requests.get(id) ?? null;
+  }
+  async findByPaymentId(paymentId: string) {
+    return this.byPaymentId.get(paymentId) ?? null;
+  }
   async save(r: MusicRequest) {
     this.requests.set(r.id, r);
     if (r.payment?.paymentId) this.byPaymentId.set(r.payment.paymentId, r);
   }
-  async findByShowId() { return []; }
-  async countFreeRequestsByCustomer() { return 0; }
+  async findByShowId() {
+    return [];
+  }
+  async countFreeRequestsByCustomer() {
+    return 0;
+  }
   async updateStatusBySong() {}
-  async aggregateAppMetrics() { return { totalVolumeCents: 0, topSongsByRequestCount: [], topArtistsByRevenue: [] }; }
-  async aggregateArtistMetrics() { return { totalEarnedCents: 0, totalRequestsPlayed: 0 }; }
+  async aggregateAppMetrics() {
+    return { totalVolumeCents: 0, topSongsByRequestCount: [], topArtistsByRevenue: [] };
+  }
+  async aggregateArtistMetrics() {
+    return { totalEarnedCents: 0, totalRequestsPlayed: 0 };
+  }
 }
 
 class MockShowRepo {
   shows = new Map<string, Show>();
-  async findById(id: string) { return this.shows.get(id) ?? null; }
+  async findById(id: string) {
+    return this.shows.get(id) ?? null;
+  }
   async save() {}
-  async findActiveByArtistId() { return null; }
-  async findAll() { return []; }
+  async findActiveByArtistId() {
+    return null;
+  }
+  async findAll() {
+    return [];
+  }
   async markExpiredShows() {}
 }
 
 class MockArtistRepo {
   artists = new Map<string, Artist>();
-  async findById(id: string) { return this.artists.get(id) ?? null; }
-  async findByEmail() { return null; }
+  async findById(id: string) {
+    return this.artists.get(id) ?? null;
+  }
+  async findByEmail() {
+    return null;
+  }
   async save() {}
 }
 
 class MockCredsRepo {
   creds: any = null;
-  async findByArtistId() { return this.creds; }
-  async save(c: any) { this.creds = c; }
-  async deleteByArtistId() { this.creds = null; }
+  async findByArtistId() {
+    return this.creds;
+  }
+  async save(c: any) {
+    this.creds = c;
+  }
+  async deleteByArtistId() {
+    this.creds = null;
+  }
 }
 
 const buildMockGateway = (overrides?: Partial<any>) => ({
   name: "mercado_pago",
   buildAuthorizeUrl: () => "",
-  exchangeOAuthCode: async () => ({} as any),
-  refreshAccessToken: async () => ({} as any),
+  exchangeOAuthCode: async () => ({}) as any,
+  refreshAccessToken: async () => ({}) as any,
   createTipPayment: async () => ({
     paymentId: "pay-1",
     status: "pending" as const,
@@ -85,8 +115,12 @@ const buildMockGateway = (overrides?: Partial<any>) => ({
 
 class MockRegistry {
   constructor(private gw: any) {}
-  get() { return this.gw; }
-  list() { return ["mercado_pago" as const]; }
+  get() {
+    return this.gw;
+  }
+  list() {
+    return ["mercado_pago" as const];
+  }
 }
 
 // ── CreateTipPaymentUseCase ────────────────────────────────────────
@@ -102,12 +136,22 @@ describe("CreateTipPaymentUseCase", () => {
     reqRepo.requests.set(req.id, req);
     showRepo.shows.set("show-1", makeShow());
     artistRepo.artists.set("artist-1", makeArtistWithPayment());
-    credsRepo.creds = { artistId: "artist-1", gateway: "mercado_pago", accessToken: "at-1", refreshToken: null, expiresAt: null };
+    credsRepo.creds = {
+      artistId: "artist-1",
+      gateway: "mercado_pago",
+      accessToken: "at-1",
+      refreshToken: null,
+      expiresAt: null,
+    };
 
     const gw = buildMockGateway();
     const useCase = new CreateTipPaymentUseCase(
-      reqRepo as any, showRepo as any, artistRepo as any,
-      credsRepo as any, new MockRegistry(gw) as any, mockLogger as any
+      reqRepo as any,
+      showRepo as any,
+      artistRepo as any,
+      credsRepo as any,
+      new MockRegistry(gw) as any,
+      mockLogger as any
     );
 
     const result = await useCase.execute({ musicRequestId: "req-1" });
@@ -132,12 +176,19 @@ describe("CreateTipPaymentUseCase", () => {
 
     let gatewayCallCount = 0;
     const gw = buildMockGateway({
-      createTipPayment: async () => { gatewayCallCount++; return { paymentId: "new", status: "pending" as const }; }
+      createTipPayment: async () => {
+        gatewayCallCount++;
+        return { paymentId: "new", status: "pending" as const };
+      },
     });
 
     const useCase = new CreateTipPaymentUseCase(
-      reqRepo as any, showRepo as any, artistRepo as any,
-      credsRepo as any, new MockRegistry(gw) as any, mockLogger as any
+      reqRepo as any,
+      showRepo as any,
+      artistRepo as any,
+      credsRepo as any,
+      new MockRegistry(gw) as any,
+      mockLogger as any
     );
 
     const result = await useCase.execute({ musicRequestId: "req-1" });
@@ -148,8 +199,12 @@ describe("CreateTipPaymentUseCase", () => {
   test("lança NotFound quando pedido não existe", async () => {
     const reqRepo = new MockRequestRepo();
     const useCase = new CreateTipPaymentUseCase(
-      reqRepo as any, new MockShowRepo() as any, new MockArtistRepo() as any,
-      new MockCredsRepo() as any, new MockRegistry(buildMockGateway()) as any, mockLogger as any
+      reqRepo as any,
+      new MockShowRepo() as any,
+      new MockArtistRepo() as any,
+      new MockCredsRepo() as any,
+      new MockRegistry(buildMockGateway()) as any,
+      mockLogger as any
     );
     await expect(useCase.execute({ musicRequestId: "nope" })).rejects.toThrow("não encontrado");
   });
@@ -165,10 +220,16 @@ describe("CreateTipPaymentUseCase", () => {
     artistRepo.artists.set("artist-1", new Artist("artist-1", "DJ", new Email("dj@test.com")));
 
     const useCase = new CreateTipPaymentUseCase(
-      reqRepo as any, showRepo as any, artistRepo as any,
-      new MockCredsRepo() as any, new MockRegistry(buildMockGateway()) as any, mockLogger as any
+      reqRepo as any,
+      showRepo as any,
+      artistRepo as any,
+      new MockCredsRepo() as any,
+      new MockRegistry(buildMockGateway()) as any,
+      mockLogger as any
     );
-    await expect(useCase.execute({ musicRequestId: "req-1" })).rejects.toThrow("sem conta de pagamento");
+    await expect(useCase.execute({ musicRequestId: "req-1" })).rejects.toThrow(
+      "sem conta de pagamento"
+    );
   });
 });
 
@@ -183,14 +244,27 @@ describe("RefundTipPaymentUseCase", () => {
     const req = makeRequestWithTip("approved");
     reqRepo.requests.set(req.id, req);
     showRepo.shows.set("show-1", makeShow());
-    credsRepo.creds = { artistId: "artist-1", gateway: "mercado_pago", accessToken: "at-1", refreshToken: null, expiresAt: null };
+    credsRepo.creds = {
+      artistId: "artist-1",
+      gateway: "mercado_pago",
+      accessToken: "at-1",
+      refreshToken: null,
+      expiresAt: null,
+    };
 
     let refundCalled = false;
-    const gw = buildMockGateway({ refundTipPayment: async () => { refundCalled = true; } });
+    const gw = buildMockGateway({
+      refundTipPayment: async () => {
+        refundCalled = true;
+      },
+    });
 
     const useCase = new RefundTipPaymentUseCase(
-      reqRepo as any, showRepo as any, credsRepo as any,
-      new MockRegistry(gw) as any, mockLogger as any
+      reqRepo as any,
+      showRepo as any,
+      credsRepo as any,
+      new MockRegistry(gw) as any,
+      mockLogger as any
     );
 
     await useCase.execute({ musicRequestId: "req-1" });
@@ -209,11 +283,18 @@ describe("RefundTipPaymentUseCase", () => {
     reqRepo.requests.set(req.id, req);
 
     let refundCalled = false;
-    const gw = buildMockGateway({ refundTipPayment: async () => { refundCalled = true; } });
+    const gw = buildMockGateway({
+      refundTipPayment: async () => {
+        refundCalled = true;
+      },
+    });
 
     const useCase = new RefundTipPaymentUseCase(
-      reqRepo as any, showRepo as any, new MockCredsRepo() as any,
-      new MockRegistry(gw) as any, mockLogger as any
+      reqRepo as any,
+      showRepo as any,
+      new MockCredsRepo() as any,
+      new MockRegistry(gw) as any,
+      mockLogger as any
     );
 
     await useCase.execute({ musicRequestId: "req-1" });
@@ -229,8 +310,11 @@ describe("RefundTipPaymentUseCase", () => {
     reqRepo.requests.set(req.id, req);
 
     const useCase = new RefundTipPaymentUseCase(
-      reqRepo as any, new MockShowRepo() as any, new MockCredsRepo() as any,
-      new MockRegistry(buildMockGateway()) as any, mockLogger as any
+      reqRepo as any,
+      new MockShowRepo() as any,
+      new MockCredsRepo() as any,
+      new MockRegistry(buildMockGateway()) as any,
+      mockLogger as any
     );
 
     await useCase.execute({ musicRequestId: "req-1" });
@@ -240,8 +324,11 @@ describe("RefundTipPaymentUseCase", () => {
 
   test("lança NotFound quando pedido não existe", async () => {
     const useCase = new RefundTipPaymentUseCase(
-      new MockRequestRepo() as any, new MockShowRepo() as any, new MockCredsRepo() as any,
-      new MockRegistry(buildMockGateway()) as any, mockLogger as any
+      new MockRequestRepo() as any,
+      new MockShowRepo() as any,
+      new MockCredsRepo() as any,
+      new MockRegistry(buildMockGateway()) as any,
+      mockLogger as any
     );
     await expect(useCase.execute({ musicRequestId: "nope" })).rejects.toThrow("não encontrado");
   });

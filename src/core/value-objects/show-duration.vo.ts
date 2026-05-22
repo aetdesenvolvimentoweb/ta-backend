@@ -11,7 +11,9 @@ export class ShowDuration {
    */
   constructor(public readonly hours: number) {
     if (!Number.isInteger(hours) || hours < 1 || hours > 24) {
-      throw new BusinessRuleError("A duração do show deve ser um inteiro entre 1 e 24 horas (RN01).");
+      throw new BusinessRuleError(
+        "A duração do show deve ser um inteiro entre 1 e 24 horas (RN01)."
+      );
     }
   }
 

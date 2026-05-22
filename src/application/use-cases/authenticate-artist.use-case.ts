@@ -1,8 +1,8 @@
-import { Artist } from "../../core/entities/artist.entity";
+import type { Artist } from "../../core/entities/artist.entity";
 import { UnauthorizedError } from "../../core/errors/app-error";
 import type { IArtistRepository } from "../../core/ports/artist.repository";
-import type { IPasswordHasher } from "../../core/ports/password-hasher.port";
 import type { ILogger } from "../../core/ports/logger.port";
+import type { IPasswordHasher } from "../../core/ports/password-hasher.port";
 import { Email } from "../../core/value-objects/email.vo";
 
 export interface AuthenticateArtistInput {
@@ -26,7 +26,7 @@ export class AuthenticateArtistUseCase {
 
     // 1. Buscar o artista
     const artist = await this.artistRepository.findByEmail(emailVO.getValue());
-    
+
     // RN: Usamos uma mensagem genérica por segurança (não revelar se o email existe ou não)
     if (!artist) {
       this.logger.warn(`Tentativa de login falha (e-mail inexistente): ${input.email}`);
@@ -35,8 +35,8 @@ export class AuthenticateArtistUseCase {
 
     // 2. Verificar se o artista possui hash de senha cadastrado
     if (!artist.passwordHash) {
-      this.logger.warn(`Tentativa de login falha (sem senha cadastrada): ${input.email}`)
-      throw new UnauthorizedError("E-mail ou senha inválidos.")
+      this.logger.warn(`Tentativa de login falha (sem senha cadastrada): ${input.email}`);
+      throw new UnauthorizedError("E-mail ou senha inválidos.");
     }
 
     // 3. Verificar senha
@@ -46,8 +46,8 @@ export class AuthenticateArtistUseCase {
     );
 
     if (!isPasswordValid) {
-      this.logger.warn(`Tentativa de login falha (senha incorreta): ${input.email}`)
-      throw new UnauthorizedError("E-mail ou senha inválidos.")
+      this.logger.warn(`Tentativa de login falha (senha incorreta): ${input.email}`);
+      throw new UnauthorizedError("E-mail ou senha inválidos.");
     }
 
     return artist;

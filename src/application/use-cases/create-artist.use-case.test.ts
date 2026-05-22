@@ -1,7 +1,7 @@
-import { expect, test, describe, spyOn } from "bun:test";
-import { CreateArtistUseCase } from "./create-artist.use-case";
-import { Artist } from "../../core/entities/artist.entity";
+import { describe, expect, test } from "bun:test";
+import type { Artist } from "../../core/entities/artist.entity";
 import { BusinessRuleError } from "../../core/errors/app-error";
+import { CreateArtistUseCase } from "./create-artist.use-case";
 
 /**
  * Mock simples para o Logger.
@@ -10,7 +10,7 @@ const mockLogger = {
   info: () => {},
   error: () => {},
   warn: () => {},
-  debug: () => {}
+  debug: () => {},
 };
 
 /**
@@ -18,21 +18,21 @@ const mockLogger = {
  */
 class InMemoryArtistRepository {
   private artists: Artist[] = [];
-  
+
   async save(artist: Artist): Promise<void> {
     this.artists.push(artist);
   }
 
   async findByEmail(email: string): Promise<Artist | null> {
-    return this.artists.find(a => a.email.getValue() === email) || null;
+    return this.artists.find((a) => a.email.getValue() === email) || null;
   }
 
   async findById(id: string): Promise<Artist | null> {
-    return this.artists.find(a => a.id === id) || null;
+    return this.artists.find((a) => a.id === id) || null;
   }
 
   async delete(id: string): Promise<void> {
-    this.artists = this.artists.filter(a => a.id !== id);
+    this.artists = this.artists.filter((a) => a.id !== id);
   }
 }
 
@@ -46,7 +46,7 @@ describe("CreateArtist Use Case", () => {
     const input = {
       name: "João do Violão",
       email: "joao@musica.com",
-      socials: { instagram: "@joaoviolao" }
+      socials: { instagram: "@joaoviolao" },
     };
 
     const artist = await useCase.execute(input);
@@ -54,7 +54,7 @@ describe("CreateArtist Use Case", () => {
     expect(artist.id).toBeDefined();
     expect(artist.name).toBe(input.name);
     expect(artist.email.getValue()).toBe(input.email);
-    
+
     // Verificar se foi salvo no repo
     const saved = await repo.findByEmail(input.email);
     expect(saved).not.toBeNull();
@@ -66,11 +66,11 @@ describe("CreateArtist Use Case", () => {
 
     const input = {
       name: "João",
-      email: "duplicado@musica.com"
+      email: "duplicado@musica.com",
     };
 
     await useCase.execute(input); // Primeiro cadastro
-    
+
     // Segunda tentativa com mesmo e-mail
     try {
       await useCase.execute(input);

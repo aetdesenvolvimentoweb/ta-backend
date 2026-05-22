@@ -13,7 +13,7 @@ export class DrizzleAdminWhitelistRepository implements IAdminWhitelistRepositor
   private readonly whitelist: Set<string>;
 
   constructor(initial: readonly string[]) {
-    this.whitelist = new Set(initial.map(e => e.trim().toLowerCase()).filter(Boolean));
+    this.whitelist = new Set(initial.map((e) => e.trim().toLowerCase()).filter(Boolean));
   }
 
   async isEmailAllowed(email: string): Promise<boolean> {

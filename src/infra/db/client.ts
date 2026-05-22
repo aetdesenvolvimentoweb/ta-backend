@@ -1,10 +1,10 @@
 import { neon } from "@neondatabase/serverless";
+import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
 import { drizzle as drizzleHttp } from "drizzle-orm/neon-http";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { drizzle as drizzlePg } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
-import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -32,7 +32,9 @@ if (connectionString.includes(".neon.tech")) {
     prepare: false,
   });
   _db = drizzlePg(client, { schema });
-  _close = async () => { await client.end(); };
+  _close = async () => {
+    await client.end();
+  };
 }
 
 export const db: DB = _db;

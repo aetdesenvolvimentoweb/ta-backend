@@ -17,7 +17,7 @@ export class Show {
     public readonly artistId: string,
     public readonly startTime: Date,
     public duration: ShowDuration = new ShowDuration(4),
-    public status: 'active' | 'finished' | 'expired' = 'active'
+    public status: "active" | "finished" | "expired" = "active"
   ) {}
 
   /**
@@ -25,11 +25,11 @@ export class Show {
    * @returns {boolean}
    */
   isExpired(): boolean {
-    if (this.status !== 'active') return true;
-    
+    if (this.status !== "active") return true;
+
     const now = new Date();
     const expirationTime = new Date(this.startTime.getTime() + this.duration.toMilliseconds());
-    
+
     return now > expirationTime;
   }
 
@@ -37,6 +37,6 @@ export class Show {
    * Encerra o show manualmente.
    */
   finish(): void {
-    this.status = 'finished';
+    this.status = "finished";
   }
 }

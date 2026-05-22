@@ -20,7 +20,7 @@ export class Email {
 
   /**
    * Valida o formato do e-mail usando regex simples.
-   * @param {string} email 
+   * @param {string} email
    * @returns {boolean}
    */
   private validate(email: string): boolean {
@@ -38,7 +38,7 @@ export class Email {
 
   /**
    * Compara se dois objetos de e-mail são iguais.
-   * @param {Email} other 
+   * @param {Email} other
    * @returns {boolean}
    */
   equals(other: Email): boolean {

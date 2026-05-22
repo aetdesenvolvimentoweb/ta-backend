@@ -1,8 +1,8 @@
+import type { ILogger } from "../../core/ports/logger.port";
 import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
-import type { IShowRepository } from "../../core/ports/show.repository";
 import type { IPaymentCredentialsRepository } from "../../core/ports/payment-credentials.repository";
 import type { IPaymentGatewayRegistry } from "../../core/ports/payment-gateway.port";
-import type { ILogger } from "../../core/ports/logger.port";
+import type { IShowRepository } from "../../core/ports/show.repository";
 
 export interface ProcessPaymentNotificationInput {
   paymentId: string;
@@ -20,13 +20,15 @@ export class ProcessPaymentNotificationUseCase {
     private readonly showRepository: IShowRepository,
     private readonly credentialsRepository: IPaymentCredentialsRepository,
     private readonly registry: IPaymentGatewayRegistry,
-    private readonly logger: ILogger,
+    private readonly logger: ILogger
   ) {}
 
   async execute(input: ProcessPaymentNotificationInput): Promise<void> {
     const request = await this.requestRepository.findByPaymentId(input.paymentId);
     if (!request) {
-      this.logger.info(`Webhook: paymentId=${input.paymentId} não encontrado (evento de outro contexto, ignorado)`);
+      this.logger.info(
+        `Webhook: paymentId=${input.paymentId} não encontrado (evento de outro contexto, ignorado)`
+      );
       return;
     }
 

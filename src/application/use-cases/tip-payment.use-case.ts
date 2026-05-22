@@ -1,11 +1,13 @@
 import { BusinessRuleError, NotFoundError } from "../../core/errors/app-error";
-import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
-import type { IShowRepository } from "../../core/ports/show.repository";
 import type { IArtistRepository } from "../../core/ports/artist.repository";
-import type { IPaymentCredentialsRepository } from "../../core/ports/payment-credentials.repository";
-import type { IPaymentGatewayRegistry } from "../../core/ports/payment-gateway.port";
-import type { TipPaymentStatus } from "../../core/ports/payment-gateway.port";
 import type { ILogger } from "../../core/ports/logger.port";
+import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
+import type { IPaymentCredentialsRepository } from "../../core/ports/payment-credentials.repository";
+import type {
+  IPaymentGatewayRegistry,
+  TipPaymentStatus,
+} from "../../core/ports/payment-gateway.port";
+import type { IShowRepository } from "../../core/ports/show.repository";
 
 export interface CreateTipPaymentInput {
   musicRequestId: string;
@@ -28,7 +30,7 @@ export class CreateTipPaymentUseCase {
     private readonly artistRepository: IArtistRepository,
     private readonly credentialsRepository: IPaymentCredentialsRepository,
     private readonly registry: IPaymentGatewayRegistry,
-    private readonly logger: ILogger,
+    private readonly logger: ILogger
   ) {}
 
   async execute(input: CreateTipPaymentInput): Promise<CreateTipPaymentOutput> {
@@ -64,7 +66,7 @@ export class CreateTipPaymentUseCase {
       platformFeePercent: 15,
       idempotencyKey: request.id,
       payerName: request.customerName,
-      description: 'Gorjeta - Toque Aquela',
+      description: "Gorjeta - Toque Aquela",
     });
 
     request.attachPayment({
@@ -74,7 +76,9 @@ export class CreateTipPaymentUseCase {
     });
     await this.requestRepository.save(request);
 
-    this.logger.info(`Pagamento PIX criado: request=${request.id} payment=${result.paymentId} status=${result.status}`);
+    this.logger.info(
+      `Pagamento PIX criado: request=${request.id} payment=${result.paymentId} status=${result.status}`
+    );
 
     return {
       paymentId: result.paymentId,
@@ -98,14 +102,14 @@ export class RefundTipPaymentUseCase {
     private readonly showRepository: IShowRepository,
     private readonly credentialsRepository: IPaymentCredentialsRepository,
     private readonly registry: IPaymentGatewayRegistry,
-    private readonly logger: ILogger,
+    private readonly logger: ILogger
   ) {}
 
   async execute(input: RefundTipPaymentInput): Promise<void> {
     const request = await this.requestRepository.findById(input.musicRequestId);
     if (!request) throw new NotFoundError("Pedido não encontrado.");
 
-    if (!request.payment || request.payment.status !== 'approved') {
+    if (!request.payment || request.payment.status !== "approved") {
       // Sem pagamento aprovado — cancela diretamente
       request.cancel();
       await this.requestRepository.save(request);
@@ -130,9 +134,11 @@ export class RefundTipPaymentUseCase {
       artistAccessToken: credentials.accessToken,
     });
 
-    request.markPaymentStatus('refunded');
+    request.markPaymentStatus("refunded");
     await this.requestRepository.save(request);
 
-    this.logger.info(`Gorjeta estornada: request=${request.id} payment=${request.payment.paymentId}`);
+    this.logger.info(
+      `Gorjeta estornada: request=${request.id} payment=${request.payment.paymentId}`
+    );
   }
 }

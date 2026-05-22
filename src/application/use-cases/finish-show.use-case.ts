@@ -1,7 +1,7 @@
-import type { IShowRepository } from "../../core/ports/show.repository";
-import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
+import { BusinessRuleError, NotFoundError, UnauthorizedError } from "../../core/errors/app-error";
 import type { ILogger } from "../../core/ports/logger.port";
-import { NotFoundError, BusinessRuleError, UnauthorizedError } from "../../core/errors/app-error";
+import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
+import type { IShowRepository } from "../../core/ports/show.repository";
 import type { RefundTipPaymentUseCase } from "./tip-payment.use-case";
 
 export interface FinishShowInput {
@@ -19,7 +19,7 @@ export class FinishShowUseCase {
     private showRepository: IShowRepository,
     private requestRepository: IMusicRequestRepository,
     private logger: ILogger,
-    private refundTipPaymentUseCase?: RefundTipPaymentUseCase,
+    private refundTipPaymentUseCase?: RefundTipPaymentUseCase
   ) {}
 
   async execute(input: FinishShowInput): Promise<void> {
@@ -30,11 +30,14 @@ export class FinishShowUseCase {
     }
 
     if (show.artistId !== input.artistId) {
-      this.logger.warn(`Tentativa de finalizar show de outro artista`, { showId: input.showId, attemptedBy: input.artistId });
+      this.logger.warn(`Tentativa de finalizar show de outro artista`, {
+        showId: input.showId,
+        attemptedBy: input.artistId,
+      });
       throw new UnauthorizedError("Você não tem permissão para finalizar este show.");
     }
 
-    if (show.status !== 'active') {
+    if (show.status !== "active") {
       throw new BusinessRuleError("Este show já não está mais ativo.");
     }
 
@@ -45,8 +48,8 @@ export class FinishShowUseCase {
     // 2. Cancelar pedidos pendentes — estornar gorjetas aprovadas (RN05/RN18)
     const pendingRequests = await this.requestRepository.findByShowId(input.showId);
     for (const req of pendingRequests) {
-      if (req.status === 'pending') {
-        if (req.payment?.status === 'approved' && this.refundTipPaymentUseCase) {
+      if (req.status === "pending") {
+        if (req.payment?.status === "approved" && this.refundTipPaymentUseCase) {
           await this.refundTipPaymentUseCase.execute({ musicRequestId: req.id });
         } else {
           req.cancel();

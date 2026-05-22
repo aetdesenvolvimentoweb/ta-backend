@@ -1,16 +1,30 @@
-import { expect, test, describe } from "bun:test";
-import { CreateStyleUseCase, MergeStylesUseCase } from "./admin-styles.use-case";
+import { describe, expect, test } from "bun:test";
 import type { IStyleRepository, Style } from "../../core/ports/style.repository";
+import { CreateStyleUseCase, MergeStylesUseCase } from "./admin-styles.use-case";
 
 class MockStyleRepo implements IStyleRepository {
   private styles: Style[] = [];
-  async save(s: Style) { this.styles.push(s); }
-  async findAll() { return this.styles; }
-  async findByName(n: string) { return this.styles.find(s => s.name.toLowerCase() === n.toLowerCase()) || null; }
-  async findById(id: string) { return this.styles.find(s => s.id === id) || null; }
-  async findByIds(ids: string[]) { return this.styles.filter(s => ids.includes(s.id)); }
-  async delete(id: string) { this.styles = this.styles.filter(s => s.id !== id); }
-  async mergeStyles(s: string, t: string) { /* Simula o update */ }
+  async save(s: Style) {
+    this.styles.push(s);
+  }
+  async findAll() {
+    return this.styles;
+  }
+  async findByName(n: string) {
+    return this.styles.find((s) => s.name.toLowerCase() === n.toLowerCase()) || null;
+  }
+  async findById(id: string) {
+    return this.styles.find((s) => s.id === id) || null;
+  }
+  async findByIds(ids: string[]) {
+    return this.styles.filter((s) => ids.includes(s.id));
+  }
+  async delete(id: string) {
+    this.styles = this.styles.filter((s) => s.id !== id);
+  }
+  async mergeStyles(s: string, t: string) {
+    /* Simula o update */
+  }
 }
 
 const mockLogger = { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} };

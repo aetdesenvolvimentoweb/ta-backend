@@ -1,4 +1,4 @@
-import { Song } from "../entities/song.entity";
+import type { Song } from "../entities/song.entity";
 
 /**
  * Interface de Repositório para a entidade Song.

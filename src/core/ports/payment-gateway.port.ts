@@ -1,6 +1,6 @@
 import type { PaymentGatewayName } from "../value-objects/payment-account.vo";
 
-export type TipPaymentStatus = 'pending' | 'approved' | 'rejected' | 'refunded';
+export type TipPaymentStatus = "pending" | "approved" | "rejected" | "refunded";
 
 export interface OAuthAuthorizeUrlInput {
   state: string;

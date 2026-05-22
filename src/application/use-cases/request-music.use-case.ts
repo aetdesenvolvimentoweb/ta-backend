@@ -1,11 +1,11 @@
 import { MusicRequest } from "../../core/entities/music-request.entity";
 import { BusinessRuleError, NotFoundError } from "../../core/errors/app-error";
-import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
-import type { IShowRepository } from "../../core/ports/show.repository";
-import type { ISongRepository } from "../../core/ports/song.repository";
 import type { IArtistRepository } from "../../core/ports/artist.repository";
 import type { ILogger } from "../../core/ports/logger.port";
+import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
 import type { IProfanityFilter } from "../../core/ports/profanity-filter.port";
+import type { IShowRepository } from "../../core/ports/show.repository";
+import type { ISongRepository } from "../../core/ports/song.repository";
 import { Money } from "../../core/value-objects/money.vo";
 
 export interface RequestMusicInput {
@@ -37,12 +37,14 @@ export class RequestMusicUseCase {
       this.songRepository.findById(input.songId),
     ]);
 
-    if (!show || show.status !== 'active' || show.isExpired()) {
+    if (!show || show.status !== "active" || show.isExpired()) {
       throw new BusinessRuleError("Este show não está aceitando pedidos no momento.");
     }
 
     if (new Date() < show.startTime) {
-      throw new BusinessRuleError("Este show ainda não começou. Aguarde o início para fazer pedidos.");
+      throw new BusinessRuleError(
+        "Este show ainda não começou. Aguarde o início para fazer pedidos."
+      );
     }
 
     if (!song || !song.isAvailable) {
@@ -61,13 +63,19 @@ export class RequestMusicUseCase {
       );
 
       if (freeRequestsCount >= 1) {
-        throw new BusinessRuleError("Você já utilizou seu pedido gratuito para este show (RN09). Adicione uma gorjeta para pedir mais!");
+        throw new BusinessRuleError(
+          "Você já utilizou seu pedido gratuito para este show (RN09). Adicione uma gorjeta para pedir mais!"
+        );
       }
     } else {
       const artist = await this.artistRepository.findById(show.artistId);
       if (!artist || !artist.canReceiveTips()) {
-        this.logger.warn(`Tentativa de gorjeta para artista ${show.artistId} sem conta de pagamento conectada (RN15).`);
-        throw new BusinessRuleError("Este artista ainda não habilitou gorjetas. Apenas pedidos gratuitos estão disponíveis no momento.");
+        this.logger.warn(
+          `Tentativa de gorjeta para artista ${show.artistId} sem conta de pagamento conectada (RN15).`
+        );
+        throw new BusinessRuleError(
+          "Este artista ainda não habilitou gorjetas. Apenas pedidos gratuitos estão disponíveis no momento."
+        );
       }
     }
 
@@ -81,7 +89,7 @@ export class RequestMusicUseCase {
       input.customerSessionId,
       sanitizedMessage,
       tip,
-      'pending'
+      "pending"
     );
 
     await this.requestRepository.save(request);

@@ -1,9 +1,9 @@
 import { NotFoundError } from "../../core/errors/app-error";
-import type { IShowRepository } from "../../core/ports/show.repository";
 import type { IArtistRepository } from "../../core/ports/artist.repository";
+import type { ILogger } from "../../core/ports/logger.port";
+import type { IShowRepository } from "../../core/ports/show.repository";
 import type { ISongRepository } from "../../core/ports/song.repository";
 import type { IStyleRepository } from "../../core/ports/style.repository";
-import type { ILogger } from "../../core/ports/logger.port";
 
 export interface PublicSong {
   id: string;
@@ -37,7 +37,7 @@ export class GetPublicShowUseCase {
     private artistRepository: IArtistRepository,
     private songRepository: ISongRepository,
     private styleRepository: IStyleRepository,
-    private logger: ILogger,
+    private logger: ILogger
   ) {}
 
   async execute(showId: string): Promise<PublicShowResult> {
@@ -54,11 +54,11 @@ export class GetPublicShowUseCase {
       throw new NotFoundError("Show não encontrado.");
     }
 
-    const available = allSongs.filter(s => s.isAvailable);
+    const available = allSongs.filter((s) => s.isAvailable);
 
-    const styleIds = [...new Set(available.map(s => s.styleId).filter(Boolean) as string[])];
+    const styleIds = [...new Set(available.map((s) => s.styleId).filter(Boolean) as string[])];
     const stylesList = styleIds.length > 0 ? await this.styleRepository.findByIds(styleIds) : [];
-    const stylesMap = new Map(stylesList.map(s => [s.id, s.name]));
+    const stylesMap = new Map(stylesList.map((s) => [s.id, s.name]));
 
     return {
       show: { id: show.id, status: show.status, startTime: show.startTime.toISOString() },
@@ -68,7 +68,7 @@ export class GetPublicShowUseCase {
         socials: artist.socials,
         canReceiveTips: artist.canReceiveTips(),
       },
-      songs: available.map(s => ({
+      songs: available.map((s) => ({
         id: s.id,
         title: s.title,
         originalArtist: s.originalArtist,

@@ -15,7 +15,7 @@ export interface OAuthStateEntry {
 }
 
 export interface IOAuthStateStore {
-  put(state: string, entry: Omit<OAuthStateEntry, 'expiresAt'>): void;
+  put(state: string, entry: Omit<OAuthStateEntry, "expiresAt">): void;
   /** Consome (one-shot) o state. Lança `UnauthorizedError` se inválido/expirado. */
   consume(state: string): OAuthStateEntry;
   /** Limpeza periódica (chamada pelo scheduler interno; idempotente). */
@@ -38,7 +38,7 @@ export class InMemoryOAuthStateStore implements IOAuthStateStore {
     if (this.sweeper) return;
     this.sweeper = setInterval(() => this.sweep(), intervalMs);
     // Não impedir o shutdown do processo por causa do timer.
-    if (typeof (this.sweeper as any).unref === 'function') (this.sweeper as any).unref();
+    if (typeof (this.sweeper as any).unref === "function") (this.sweeper as any).unref();
   }
 
   stopSweeper(): void {
@@ -48,7 +48,7 @@ export class InMemoryOAuthStateStore implements IOAuthStateStore {
     }
   }
 
-  put(state: string, entry: Omit<OAuthStateEntry, 'expiresAt'>): void {
+  put(state: string, entry: Omit<OAuthStateEntry, "expiresAt">): void {
     this.map.set(state, { ...entry, expiresAt: Date.now() + this.ttlMs });
   }
 

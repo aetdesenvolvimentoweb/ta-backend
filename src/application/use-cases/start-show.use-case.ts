@@ -1,8 +1,8 @@
 import { Show } from "../../core/entities/show.entity";
 import { BusinessRuleError, NotFoundError } from "../../core/errors/app-error";
-import type { IShowRepository } from "../../core/ports/show.repository";
 import type { IArtistRepository } from "../../core/ports/artist.repository";
 import type { ILogger } from "../../core/ports/logger.port";
+import type { IShowRepository } from "../../core/ports/show.repository";
 import { ShowDuration } from "../../core/value-objects/show-duration.vo";
 
 export interface StartShowInput {
@@ -34,7 +34,7 @@ export class StartShowUseCase {
     if (activeShow) {
       // Antes de bloquear, verificamos se o show "ativo" já não expirou pelo tempo
       if (activeShow.isExpired()) {
-        activeShow.status = 'expired';
+        activeShow.status = "expired";
         await this.showRepository.save(activeShow);
         this.logger.info(`Show ${activeShow.id} marcado como expirado automaticamente.`);
       } else {
@@ -50,17 +50,14 @@ export class StartShowUseCase {
     if (input.scheduledStartTime) {
       const diff = input.scheduledStartTime.getTime() - startTime.getTime();
       if (diff <= 0) throw new BusinessRuleError("O horário de início deve ser no futuro.");
-      if (diff > MAX_SCHEDULE_AHEAD_MS) throw new BusinessRuleError("O show não pode ser agendado com mais de 24 horas de antecedência.");
+      if (diff > MAX_SCHEDULE_AHEAD_MS)
+        throw new BusinessRuleError(
+          "O show não pode ser agendado com mais de 24 horas de antecedência."
+        );
       startTime = input.scheduledStartTime;
     }
 
-    const show = new Show(
-      crypto.randomUUID(),
-      input.artistId,
-      startTime,
-      duration,
-      'active'
-    );
+    const show = new Show(crypto.randomUUID(), input.artistId, startTime, duration, "active");
 
     await this.showRepository.save(show);
 

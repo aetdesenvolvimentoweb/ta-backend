@@ -1,11 +1,18 @@
 import { NotFoundError, UnauthorizedError } from "../../core/errors/app-error";
-import { PaymentAccount, type PaymentGatewayName } from "../../core/value-objects/payment-account.vo";
 import type { IArtistRepository } from "../../core/ports/artist.repository";
 import type { ILogger } from "../../core/ports/logger.port";
 import type { IPaymentCredentialsRepository } from "../../core/ports/payment-credentials.repository";
 import type { IPaymentGatewayRegistry } from "../../core/ports/payment-gateway.port";
+import {
+  PaymentAccount,
+  type PaymentGatewayName,
+} from "../../core/value-objects/payment-account.vo";
 import type { IOAuthStateStore } from "../../infra/security/oauth-state-store";
-import { deriveCodeChallenge, generateCodeVerifier, generateOAuthState } from "../../infra/security/pkce";
+import {
+  deriveCodeChallenge,
+  generateCodeVerifier,
+  generateOAuthState,
+} from "../../infra/security/pkce";
 
 export interface StartPaymentConnectionInput {
   artistId: string;
@@ -98,9 +105,7 @@ export class CompletePaymentConnectionUseCase {
       throw new UnauthorizedError("Sessão OAuth inválida.");
     }
 
-    artist.connectPaymentAccount(
-      new PaymentAccount(gatewayName, credentials.externalAccountId)
-    );
+    artist.connectPaymentAccount(new PaymentAccount(gatewayName, credentials.externalAccountId));
     await this.artistRepository.save(artist);
 
     await this.credentialsRepository.save({
@@ -111,7 +116,9 @@ export class CompletePaymentConnectionUseCase {
       expiresAt: credentials.expiresAt,
     });
 
-    this.logger.info(`OAuth concluído: artist=${artist.id} gateway=${gatewayName} extAccount=${credentials.externalAccountId}`);
+    this.logger.info(
+      `OAuth concluído: artist=${artist.id} gateway=${gatewayName} extAccount=${credentials.externalAccountId}`
+    );
 
     return {
       artistId: artist.id,

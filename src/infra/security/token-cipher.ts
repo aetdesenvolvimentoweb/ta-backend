@@ -23,7 +23,7 @@ function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
-  let bin = '';
+  let bin = "";
   for (const b of bytes) bin += String.fromCharCode(b);
   return btoa(bin);
 }
@@ -40,25 +40,20 @@ export class AesGcmTokenCipher implements ITokenCipher {
 
   constructor(hexKey: string) {
     if (!/^[0-9a-fA-F]{64}$/.test(hexKey)) {
-      throw new Error('AesGcmTokenCipher: a chave deve ser hex de 64 chars (32 bytes).');
+      throw new Error("AesGcmTokenCipher: a chave deve ser hex de 64 chars (32 bytes).");
     }
     const raw = hexToBytes(hexKey);
-    this.keyPromise = crypto.subtle.importKey(
-      'raw',
-      raw,
-      { name: 'AES-GCM' },
-      false,
-      ['encrypt', 'decrypt']
-    );
+    this.keyPromise = crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, [
+      "encrypt",
+      "decrypt",
+    ]);
   }
 
   async encrypt(plaintext: string): Promise<string> {
     const key = await this.keyPromise;
     const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
     const data = new TextEncoder().encode(plaintext);
-    const cipher = new Uint8Array(
-      await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data)
-    );
+    const cipher = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, data));
     const out = new Uint8Array(iv.length + cipher.length);
     out.set(iv, 0);
     out.set(cipher, iv.length);
@@ -69,11 +64,11 @@ export class AesGcmTokenCipher implements ITokenCipher {
     const key = await this.keyPromise;
     const bytes = base64ToBytes(payload);
     if (bytes.length <= IV_BYTES) {
-      throw new Error('AesGcmTokenCipher: payload corrompido.');
+      throw new Error("AesGcmTokenCipher: payload corrompido.");
     }
     const iv = bytes.slice(0, IV_BYTES);
     const cipher = bytes.slice(IV_BYTES);
-    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
+    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, cipher);
     return new TextDecoder().decode(plain);
   }
 }
