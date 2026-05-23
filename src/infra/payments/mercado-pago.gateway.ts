@@ -142,14 +142,14 @@ export class MercadoPagoGateway implements IPaymentGateway {
       ((input.amountInCents * input.platformFeePercent) / 100 / 100).toFixed(2)
     );
 
-    const body = {
+    const body: Record<string, unknown> = {
       transaction_amount: amountInReais,
       description: input.description,
       payment_method_id: "pix",
-      marketplace_fee: feeInReais,
+      application_fee: feeInReais,
       payer: {
+        email: `cliente+${input.idempotencyKey}@toqueaquela.app`,
         first_name: input.payerName ?? "Cliente",
-        email: "pagador@toqueaquela.app",
       },
     };
 

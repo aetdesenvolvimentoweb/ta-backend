@@ -4,6 +4,7 @@ import type { ILogger } from "../../core/ports/logger.port";
 import type { IMusicRequestRepository } from "../../core/ports/music-request.repository";
 import type { IPaymentCredentialsRepository } from "../../core/ports/payment-credentials.repository";
 import type {
+  CreateTipPaymentResult,
   IPaymentGatewayRegistry,
   TipPaymentStatus,
 } from "../../core/ports/payment-gateway.port";
@@ -59,15 +60,24 @@ export class CreateTipPaymentUseCase {
     }
 
     const gateway = this.registry.get(artist.paymentAccount!.gateway);
-    const result = await gateway.createTipPayment({
-      artistExternalAccountId: artist.paymentAccount!.externalAccountId,
-      artistAccessToken: credentials.accessToken,
-      amountInCents: request.tip.amountInCents,
-      platformFeePercent: 15,
-      idempotencyKey: request.id,
-      payerName: request.customerName,
-      description: "Gorjeta - Toque Aquela",
-    });
+    let result: CreateTipPaymentResult;
+    try {
+      result = await gateway.createTipPayment({
+        artistExternalAccountId: artist.paymentAccount!.externalAccountId,
+        artistAccessToken: credentials.accessToken,
+        amountInCents: request.tip.amountInCents,
+        platformFeePercent: 15,
+        idempotencyKey: request.id,
+        payerName: request.customerName,
+        description: "Gorjeta - Toque Aquela",
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `Falha ao criar pagamento PIX: request=${request.id} artist=${show.artistId} amount=${request.tip.amountInCents} :: ${msg}`
+      );
+      throw err;
+    }
 
     request.attachPayment({
       gateway: artist.paymentAccount!.gateway,

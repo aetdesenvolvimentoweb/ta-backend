@@ -145,8 +145,9 @@ describe("MercadoPagoGateway — Pagamento PIX (Entrega B)", () => {
 
     expect(capturedBody.payment_method_id).toBe("pix");
     expect(capturedBody.transaction_amount).toBe(10); // 1000 centavos = 10 reais
-    expect(capturedBody.marketplace_fee).toBe(1.5); // 15% de 10 = 1.5
+    expect(capturedBody.application_fee).toBe(1.5); // 15% de 10 = 1.5
     expect(capturedBody.payer.first_name).toBe("Maria");
+    expect(capturedBody.payer.email).toBe("cliente+req-abc@toqueaquela.app");
 
     expect((capturedHeaders as any)["X-Idempotency-Key"]).toBe("req-abc");
     expect((capturedHeaders as any)["Authorization"]).toBe("Bearer at-seller");
