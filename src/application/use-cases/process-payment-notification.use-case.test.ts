@@ -1,30 +1,37 @@
 import { describe, expect, test } from "bun:test";
+import { Artist } from "../../core/entities/artist.entity";
 import { MusicRequest } from "../../core/entities/music-request.entity";
-import { Show } from "../../core/entities/show.entity";
+import { Email } from "../../core/value-objects/email.vo";
 import { Money } from "../../core/value-objects/money.vo";
-import { ShowDuration } from "../../core/value-objects/show-duration.vo";
+import { PaymentAccount } from "../../core/value-objects/payment-account.vo";
 import { ProcessPaymentNotificationUseCase } from "./process-payment-notification.use-case";
 
 const mockLogger = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} };
 
-function makeRequestWithPayment(paymentStatus: "pending" | "approved" | "rejected" | "refunded") {
+function makeArtist() {
+  const a = new Artist("artist-1", "DJ", new Email("dj@test.com"));
+  a.connectPaymentAccount(new PaymentAccount("mercado_pago", "mp-seller-1"));
+  return a;
+}
+
+function makeRequestWithPreference(preferenceId: string) {
   const req = new MusicRequest("req-1", "show-1", "song-1", "João", "sess-1", null, new Money(500));
-  req.attachPayment({ gateway: "mercado_pago", paymentId: "pay-42", status: paymentStatus });
+  req.attachPayment({ gateway: "mercado_pago", paymentId: preferenceId, status: "pending" });
   return req;
 }
 
 class MockRequestRepo {
-  byPaymentId = new Map<string, MusicRequest>();
   requests = new Map<string, MusicRequest>();
-  async findByPaymentId(id: string) {
-    return this.byPaymentId.get(id) ?? null;
-  }
+  saved: MusicRequest[] = [];
   async findById(id: string) {
     return this.requests.get(id) ?? null;
   }
+  async findByPaymentId() {
+    return null;
+  }
   async save(r: MusicRequest) {
     this.requests.set(r.id, r);
-    if (r.payment?.paymentId) this.byPaymentId.set(r.payment.paymentId, r);
+    this.saved.push(r);
   }
   async findByShowId() {
     return [];
@@ -41,19 +48,19 @@ class MockRequestRepo {
   }
 }
 
-class MockShowRepo {
-  shows = new Map<string, Show>();
-  async findById(id: string) {
-    return this.shows.get(id) ?? null;
-  }
-  async save() {}
-  async findActiveByArtistId() {
+class MockArtistRepo {
+  byPaymentAccount = new Map<string, Artist>();
+  async findById() {
     return null;
   }
-  async findAll() {
-    return [];
+  async findByEmail() {
+    return null;
   }
-  async markExpiredShows() {}
+  async findByPaymentAccount(gateway: string, ext: string) {
+    return this.byPaymentAccount.get(`${gateway}:${ext}`) ?? null;
+  }
+  async save() {}
+  async delete() {}
 }
 
 class MockCredsRepo {
@@ -65,14 +72,17 @@ class MockCredsRepo {
   async deleteByArtistId() {}
 }
 
-const buildMockGateway = (status: "pending" | "approved" | "rejected" | "refunded") => ({
+const buildGateway = (
+  status: "pending" | "approved" | "rejected" | "refunded",
+  extRef?: string
+) => ({
   name: "mercado_pago",
   buildAuthorizeUrl: () => "",
   exchangeOAuthCode: async () => ({}) as any,
   refreshAccessToken: async () => ({}) as any,
   createTipPayment: async () => ({}) as any,
   refundTipPayment: async () => {},
-  fetchPaymentStatus: async () => status,
+  fetchPaymentStatus: async () => ({ status, externalReference: extRef }),
 });
 
 class MockRegistry {
@@ -85,100 +95,110 @@ class MockRegistry {
   }
 }
 
-describe("ProcessPaymentNotificationUseCase", () => {
-  test("atualiza status para 'approved' quando gateway retorna approved", async () => {
-    const reqRepo = new MockRequestRepo();
-    const showRepo = new MockShowRepo();
-    const credsRepo = new MockCredsRepo();
+function setup(opts: {
+  preferenceIdStored?: string;
+  gwStatus: "pending" | "approved" | "rejected" | "refunded";
+  gwExternalReference?: string;
+}) {
+  const reqRepo = new MockRequestRepo();
+  const artistRepo = new MockArtistRepo();
+  const credsRepo = new MockCredsRepo();
 
-    const req = makeRequestWithPayment("pending");
-    reqRepo.byPaymentId.set("pay-42", req);
-    reqRepo.requests.set(req.id, req);
-    showRepo.shows.set(
-      "show-1",
-      new Show("show-1", "artist-1", new Date(), new ShowDuration(4), "active")
-    );
+  artistRepo.byPaymentAccount.set("mercado_pago:mp-seller-1", makeArtist());
+  credsRepo.creds = { artistId: "artist-1", gateway: "mercado_pago", accessToken: "at-1" };
 
-    const useCase = new ProcessPaymentNotificationUseCase(
-      reqRepo as any,
-      showRepo as any,
-      credsRepo as any,
-      new MockRegistry(buildMockGateway("approved")) as any,
-      mockLogger as any
-    );
+  if (opts.preferenceIdStored) {
+    reqRepo.requests.set("req-1", makeRequestWithPreference(opts.preferenceIdStored));
+  }
 
-    await useCase.execute({ paymentId: "pay-42" });
+  const useCase = new ProcessPaymentNotificationUseCase(
+    reqRepo as any,
+    artistRepo as any,
+    credsRepo as any,
+    new MockRegistry(buildGateway(opts.gwStatus, opts.gwExternalReference)) as any,
+    mockLogger as any
+  );
+  return { useCase, reqRepo, artistRepo, credsRepo };
+}
+
+describe("ProcessPaymentNotificationUseCase — Checkout Pro", () => {
+  test("primeira notificação: upgrade preferenceId → paymentId real + status approved", async () => {
+    const { useCase, reqRepo } = setup({
+      preferenceIdStored: "pref-1",
+      gwStatus: "approved",
+      gwExternalReference: "req-1",
+    });
+
+    await useCase.execute({
+      paymentId: "pay-real-99",
+      sellerExternalAccountId: "mp-seller-1",
+      gateway: "mercado_pago",
+    });
 
     const saved = await reqRepo.findById("req-1");
+    expect(saved?.payment?.paymentId).toBe("pay-real-99");
     expect(saved?.payment?.status).toBe("approved");
   });
 
-  test("é idempotente — ignora quando status já é o mesmo", async () => {
-    const reqRepo = new MockRequestRepo();
-    const showRepo = new MockShowRepo();
+  test("idempotente: ignora quando paymentId e status já estão consolidados", async () => {
+    const { useCase, reqRepo } = setup({
+      preferenceIdStored: "pay-real-99",
+      gwStatus: "approved",
+      gwExternalReference: "req-1",
+    });
+    const req = await reqRepo.findById("req-1");
+    req!.markPaymentStatus("approved");
+    reqRepo.saved = [];
 
-    const req = makeRequestWithPayment("approved");
-    reqRepo.byPaymentId.set("pay-42", req);
-    reqRepo.requests.set(req.id, req);
-    showRepo.shows.set(
-      "show-1",
-      new Show("show-1", "artist-1", new Date(), new ShowDuration(4), "active")
-    );
+    await useCase.execute({
+      paymentId: "pay-real-99",
+      sellerExternalAccountId: "mp-seller-1",
+      gateway: "mercado_pago",
+    });
 
-    let saveCount = 0;
-    const origSave = reqRepo.save.bind(reqRepo);
-    reqRepo.save = async (r: MusicRequest) => {
-      saveCount++;
-      return origSave(r);
-    };
-
-    const useCase = new ProcessPaymentNotificationUseCase(
-      reqRepo as any,
-      showRepo as any,
-      new MockCredsRepo() as any,
-      new MockRegistry(buildMockGateway("approved")) as any,
-      mockLogger as any
-    );
-
-    await useCase.execute({ paymentId: "pay-42" });
-    expect(saveCount).toBe(0);
+    expect(reqRepo.saved.length).toBe(0);
   });
 
-  test("ignora paymentId desconhecido sem lançar erro", async () => {
-    const reqRepo = new MockRequestRepo();
-    const useCase = new ProcessPaymentNotificationUseCase(
-      reqRepo as any,
-      new MockShowRepo() as any,
-      new MockCredsRepo() as any,
-      new MockRegistry(buildMockGateway("approved")) as any,
-      mockLogger as any
-    );
-
-    await expect(useCase.execute({ paymentId: "unknown-pay" })).resolves.toBeUndefined();
+  test("ignora quando artista não é da nossa base (extAcc desconhecida)", async () => {
+    const { useCase, reqRepo } = setup({
+      gwStatus: "approved",
+      gwExternalReference: "req-1",
+    });
+    await expect(
+      useCase.execute({
+        paymentId: "pay-x",
+        sellerExternalAccountId: "outro-seller",
+        gateway: "mercado_pago",
+      })
+    ).resolves.toBeUndefined();
+    expect(reqRepo.saved.length).toBe(0);
   });
 
-  test("marca request como refunded quando status é refunded", async () => {
-    const reqRepo = new MockRequestRepo();
-    const showRepo = new MockShowRepo();
+  test("ignora pagamento sem external_reference (não criado por nós)", async () => {
+    const { useCase, reqRepo } = setup({
+      preferenceIdStored: "pref-1",
+      gwStatus: "approved",
+      gwExternalReference: undefined,
+    });
+    await useCase.execute({
+      paymentId: "pay-foreign",
+      sellerExternalAccountId: "mp-seller-1",
+      gateway: "mercado_pago",
+    });
+    expect(reqRepo.saved.length).toBe(0);
+  });
 
-    const req = makeRequestWithPayment("approved");
-    reqRepo.byPaymentId.set("pay-42", req);
-    reqRepo.requests.set(req.id, req);
-    showRepo.shows.set(
-      "show-1",
-      new Show("show-1", "artist-1", new Date(), new ShowDuration(4), "active")
-    );
-
-    const useCase = new ProcessPaymentNotificationUseCase(
-      reqRepo as any,
-      showRepo as any,
-      new MockCredsRepo() as any,
-      new MockRegistry(buildMockGateway("refunded")) as any,
-      mockLogger as any
-    );
-
-    await useCase.execute({ paymentId: "pay-42" });
-
+  test("status refunded propaga para request.status", async () => {
+    const { useCase, reqRepo } = setup({
+      preferenceIdStored: "pref-1",
+      gwStatus: "refunded",
+      gwExternalReference: "req-1",
+    });
+    await useCase.execute({
+      paymentId: "pay-real-99",
+      sellerExternalAccountId: "mp-seller-1",
+      gateway: "mercado_pago",
+    });
     const saved = await reqRepo.findById("req-1");
     expect(saved?.payment?.status).toBe("refunded");
     expect(saved?.status).toBe("refunded");

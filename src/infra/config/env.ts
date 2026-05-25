@@ -53,4 +53,19 @@ export const env = {
     process.env.MP_FRONTEND_RETURN_URL ?? "http://localhost:5173/payment-account",
   /** Segredo HMAC para validar webhooks do Mercado Pago. Obtenha no painel de webhooks do MP. */
   MP_WEBHOOK_SECRET: process.env.MP_WEBHOOK_SECRET ?? "",
+  /** Base URL pública do frontend — usada para montar as back_urls do Checkout Pro. */
+  FRONTEND_PUBLIC_BASE_URL: process.env.FRONTEND_PUBLIC_BASE_URL ?? "http://localhost:5173",
+  /**
+   * Restringe o Checkout Pro a PIX apenas. `true` em produção (menor taxa, UX fricção-zero).
+   * Em dev/teste com vendedor sintético do MP, definir `false` — contas de teste raramente
+   * conseguem habilitar PIX e o checkout ficaria sem nenhum meio disponível.
+   */
+  MP_PIX_ONLY: (process.env.MP_PIX_ONLY ?? "true").toLowerCase() !== "false",
+  /**
+   * Em dev com test users do MP: usar `sandbox_init_point` da preference. O `init_point`
+   * (produção) dispara anti-fraude que exige código por email — `@testuser.com` não tem
+   * caixa real, então o pagamento trava. `false` em produção.
+   */
+  MP_USE_SANDBOX_CHECKOUT:
+    (process.env.MP_USE_SANDBOX_CHECKOUT ?? "false").toLowerCase() === "true",
 } as const;

@@ -3,6 +3,7 @@ import type {
   CreateTipPaymentInput,
   CreateTipPaymentResult,
   FetchPaymentStatusInput,
+  FetchPaymentStatusResult,
   IPaymentGateway,
   OAuthAuthorizeUrlInput,
   OAuthCredentials,
@@ -20,6 +21,16 @@ export interface MercadoPagoConfig {
   apiBaseUrl?: string;
   /** Função `fetch` injetável para testes. */
   fetch?: typeof fetch;
+  /**
+   * Se true, restringe o Checkout Pro a PIX apenas (exclui cartão/conta MP/boleto/ATM).
+   * Default: true (produção). Desligue em dev quando o vendedor de teste não tem PIX.
+   */
+  pixOnly?: boolean;
+  /**
+   * Se true, retorna `sandbox_init_point` da preference em vez de `init_point`. Usar em
+   * dev com test users (o checkout produção dispara verificação por email que não chega).
+   */
+  useSandboxCheckout?: boolean;
 }
 
 interface MpTokenResponse {
@@ -33,13 +44,14 @@ interface MpTokenResponse {
 interface MpPaymentResponse {
   id: number | string;
   status: string;
-  point_of_interaction?: {
-    transaction_data?: {
-      ticket_url?: string;
-      qr_code?: string;
-      qr_code_base64?: string;
-    };
-  };
+  external_reference?: string;
+}
+
+interface MpPreferenceResponse {
+  id: string;
+  init_point: string;
+  sandbox_init_point?: string;
+  external_reference?: string;
 }
 
 /**
@@ -136,6 +148,14 @@ export class MercadoPagoGateway implements IPaymentGateway {
     return this.toCredentials(data);
   }
 
+  /**
+   * Cria uma preference do Checkout Pro (hospedado). Não cria pagamento direto:
+   * o cliente conclui na página do MP (PIX/cartão/boleto), e o pagamento real
+   * nasce quando ele paga — o webhook então reconcilia via `external_reference`.
+   *
+   * Retorna o `preferenceId` no campo `paymentId` (será substituído pelo
+   * paymentId real quando o webhook chegar).
+   */
   async createTipPayment(input: CreateTipPaymentInput): Promise<CreateTipPaymentResult> {
     const amountInReais = input.amountInCents / 100;
     const feeInReais = parseFloat(
@@ -143,17 +163,36 @@ export class MercadoPagoGateway implements IPaymentGateway {
     );
 
     const body: Record<string, unknown> = {
-      transaction_amount: amountInReais,
-      description: input.description,
-      payment_method_id: "pix",
-      application_fee: feeInReais,
-      payer: {
-        email: `cliente+${input.idempotencyKey}@toqueaquela.app`,
-        first_name: input.payerName ?? "Cliente",
+      items: [
+        {
+          id: input.idempotencyKey,
+          title: input.description,
+          quantity: 1,
+          unit_price: amountInReais,
+          currency_id: "BRL",
+        },
+      ],
+      marketplace_fee: feeInReais,
+      external_reference: input.idempotencyKey,
+      payment_methods: {
+        // Quando pixOnly: exclui cartão/débito/boleto/ATM/saldo MP — só sobra `bank_transfer` (PIX BR).
+        ...(this.config.pixOnly !== false
+          ? {
+              excluded_payment_types: [
+                { id: "credit_card" },
+                { id: "debit_card" },
+                { id: "ticket" },
+                { id: "atm" },
+                { id: "account_money" },
+              ],
+            }
+          : {}),
+        installments: 1,
       },
+      ...(input.backUrls ? { back_urls: input.backUrls } : {}),
     };
 
-    const res = await this.fetchFn(`${this.apiBaseUrl}/v1/payments`, {
+    const res = await this.fetchFn(`${this.apiBaseUrl}/checkout/preferences`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -167,15 +206,18 @@ export class MercadoPagoGateway implements IPaymentGateway {
     if (!res.ok) {
       const text = await res.text();
       throw new BusinessRuleError(
-        `Falha ao criar pagamento PIX no Mercado Pago: ${res.status} ${text}`
+        `Falha ao criar preference no Mercado Pago: ${res.status} ${text}`
       );
     }
 
-    const data = (await res.json()) as MpPaymentResponse;
+    const data = (await res.json()) as MpPreferenceResponse;
+    const checkoutUrl = this.config.useSandboxCheckout
+      ? (data.sandbox_init_point ?? data.init_point)
+      : data.init_point;
     return {
-      paymentId: String(data.id),
-      status: this.mapPaymentStatus(data.status),
-      checkoutUrl: data.point_of_interaction?.transaction_data?.ticket_url,
+      paymentId: data.id,
+      status: "pending",
+      checkoutUrl,
       raw: data,
     };
   }
@@ -199,7 +241,7 @@ export class MercadoPagoGateway implements IPaymentGateway {
     }
   }
 
-  async fetchPaymentStatus(input: FetchPaymentStatusInput): Promise<TipPaymentStatus> {
+  async fetchPaymentStatus(input: FetchPaymentStatusInput): Promise<FetchPaymentStatusResult> {
     const headers: Record<string, string> = { Accept: "application/json" };
     if (input.artistAccessToken) {
       headers["Authorization"] = `Bearer ${input.artistAccessToken}`;
@@ -216,8 +258,11 @@ export class MercadoPagoGateway implements IPaymentGateway {
       );
     }
 
-    const data = (await res.json()) as { status: string };
-    return this.mapPaymentStatus(data.status);
+    const data = (await res.json()) as MpPaymentResponse;
+    return {
+      status: this.mapPaymentStatus(data.status),
+      externalReference: data.external_reference,
+    };
   }
 
   private mapPaymentStatus(status: string): TipPaymentStatus {

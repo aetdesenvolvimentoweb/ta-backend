@@ -97,6 +97,8 @@ if (env.MP_CLIENT_ID && env.MP_CLIENT_SECRET) {
     new MercadoPagoGateway({
       clientId: env.MP_CLIENT_ID,
       clientSecret: env.MP_CLIENT_SECRET,
+      pixOnly: env.MP_PIX_ONLY,
+      useSandboxCheckout: env.MP_USE_SANDBOX_CHECKOUT,
     })
   );
 } else {
@@ -188,7 +190,8 @@ const createTipPaymentUseCase = new CreateTipPaymentUseCase(
   artistRepository,
   credentialsRepository,
   paymentRegistry,
-  logger
+  logger,
+  env.FRONTEND_PUBLIC_BASE_URL
 );
 const refundTipPaymentUseCase = new RefundTipPaymentUseCase(
   requestRepository,
@@ -199,7 +202,7 @@ const refundTipPaymentUseCase = new RefundTipPaymentUseCase(
 );
 const processPaymentNotificationUseCase = new ProcessPaymentNotificationUseCase(
   requestRepository,
-  showRepository,
+  artistRepository,
   credentialsRepository,
   paymentRegistry,
   logger

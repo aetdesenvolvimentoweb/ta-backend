@@ -82,7 +82,11 @@ class MockArtistRepo {
   async findByEmail() {
     return null;
   }
+  async findByPaymentAccount() {
+    return null;
+  }
   async save() {}
+  async delete() {}
 }
 
 class MockCredsRepo {
@@ -109,7 +113,7 @@ const buildMockGateway = (overrides?: Partial<any>) => ({
     checkoutUrl: "https://pix.test/qr",
   }),
   refundTipPayment: async () => {},
-  fetchPaymentStatus: async () => "pending" as const,
+  fetchPaymentStatus: async () => ({ status: "pending" as const, externalReference: undefined }),
   ...overrides,
 });
 
@@ -151,7 +155,8 @@ describe("CreateTipPaymentUseCase", () => {
       artistRepo as any,
       credsRepo as any,
       new MockRegistry(gw) as any,
-      mockLogger as any
+      mockLogger as any,
+      "http://localhost:5173"
     );
 
     const result = await useCase.execute({ musicRequestId: "req-1" });
@@ -188,7 +193,8 @@ describe("CreateTipPaymentUseCase", () => {
       artistRepo as any,
       credsRepo as any,
       new MockRegistry(gw) as any,
-      mockLogger as any
+      mockLogger as any,
+      "http://localhost:5173"
     );
 
     const result = await useCase.execute({ musicRequestId: "req-1" });
@@ -204,7 +210,8 @@ describe("CreateTipPaymentUseCase", () => {
       new MockArtistRepo() as any,
       new MockCredsRepo() as any,
       new MockRegistry(buildMockGateway()) as any,
-      mockLogger as any
+      mockLogger as any,
+      "http://localhost:5173"
     );
     await expect(useCase.execute({ musicRequestId: "nope" })).rejects.toThrow("não encontrado");
   });
@@ -225,7 +232,8 @@ describe("CreateTipPaymentUseCase", () => {
       artistRepo as any,
       new MockCredsRepo() as any,
       new MockRegistry(buildMockGateway()) as any,
-      mockLogger as any
+      mockLogger as any,
+      "http://localhost:5173"
     );
     await expect(useCase.execute({ musicRequestId: "req-1" })).rejects.toThrow(
       "sem conta de pagamento"

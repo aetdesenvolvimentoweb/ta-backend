@@ -31,6 +31,10 @@ class InMemoryArtistRepository {
     return this.artists.find((a) => a.id === id) || null;
   }
 
+  async findByPaymentAccount(): Promise<Artist | null> {
+    return null;
+  }
+
   async delete(id: string): Promise<void> {
     this.artists = this.artists.filter((a) => a.id !== id);
   }

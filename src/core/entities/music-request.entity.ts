@@ -41,6 +41,16 @@ export class MusicRequest {
     this.payment = payment;
   }
 
+  /**
+   * Substitui o `paymentId` armazenado. Usado pelo webhook quando o pagamento
+   * real do MP nasce a partir de uma preference: na criação guardamos o
+   * preferenceId, e ao receber a primeira notificação trocamos pelo paymentId.
+   */
+  upgradePaymentId(paymentId: string): void {
+    if (!this.payment) return;
+    this.payment = { ...this.payment, paymentId };
+  }
+
   markPaymentStatus(status: TipPaymentStatus): void {
     if (!this.payment) return;
     this.payment = { ...this.payment, status };

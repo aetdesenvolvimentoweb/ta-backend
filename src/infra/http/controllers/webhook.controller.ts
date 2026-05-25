@@ -79,13 +79,25 @@ export const webhookController = (
           await verifyMercadoPagoSignature(webhookSecret, paymentId, xRequestId, xSignature);
         }
 
-        await processPaymentNotification.execute({ paymentId });
+        // `user_id` (collector/seller) é necessário para resolver as credenciais
+        // do artista e fetchar o payment no MP. Sem ele, ignoramos.
+        const sellerExternalAccountId = body.user_id !== undefined ? String(body.user_id) : "";
+        if (!sellerExternalAccountId) {
+          return { received: true };
+        }
+
+        await processPaymentNotification.execute({
+          paymentId,
+          sellerExternalAccountId,
+          gateway: "mercado_pago",
+        });
         return { received: true };
       },
       {
         body: t.Object(
           {
             type: t.String(),
+            user_id: t.Optional(t.Union([t.String(), t.Number()])),
             data: t.Optional(
               t.Object(
                 {

@@ -1,8 +1,12 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { Artist } from "../../../core/entities/artist.entity";
 import type { IArtistRepository } from "../../../core/ports/artist.repository";
 import { Email } from "../../../core/value-objects/email.vo";
-import { isSupportedGateway, PaymentAccount } from "../../../core/value-objects/payment-account.vo";
+import {
+  isSupportedGateway,
+  PaymentAccount,
+  type PaymentGatewayName,
+} from "../../../core/value-objects/payment-account.vo";
 import { db } from "../client";
 import { artists } from "../schema";
 
@@ -80,6 +84,22 @@ export class DrizzleArtistRepository implements IArtistRepository {
 
   async findById(id: string): Promise<Artist | null> {
     const [row] = await db.select().from(artists).where(eq(artists.id, id));
+    return row ? rowToArtist(row) : null;
+  }
+
+  async findByPaymentAccount(
+    gateway: PaymentGatewayName,
+    externalAccountId: string
+  ): Promise<Artist | null> {
+    const [row] = await db
+      .select()
+      .from(artists)
+      .where(
+        and(
+          eq(artists.paymentGateway, gateway),
+          eq(artists.paymentExternalAccountId, externalAccountId)
+        )
+      );
     return row ? rowToArtist(row) : null;
   }
 

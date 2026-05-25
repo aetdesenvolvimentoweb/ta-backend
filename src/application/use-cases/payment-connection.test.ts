@@ -19,6 +19,9 @@ class MockArtistRepo {
   async findByEmail() {
     return null;
   }
+  async findByPaymentAccount() {
+    return null;
+  }
   async save(a: Artist) {
     this.artists.set(a.id, a);
   }
@@ -54,7 +57,7 @@ const buildMockGateway = (overrides?: Partial<any>) => ({
   refreshAccessToken: async () => ({}) as any,
   createTipPayment: async () => ({}) as any,
   refundTipPayment: async () => {},
-  fetchPaymentStatus: async () => "pending" as const,
+  fetchPaymentStatus: async () => ({ status: "pending" as const, externalReference: undefined }),
   ...overrides,
 });
 

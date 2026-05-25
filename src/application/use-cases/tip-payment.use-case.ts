@@ -21,8 +21,11 @@ export interface CreateTipPaymentOutput {
 }
 
 /**
- * Cria um pagamento PIX com split nativo 85/15 (RN16) para um pedido de música com gorjeta.
- * Chamado logo após RequestMusicUseCase quando tipAmountInCents > 0.
+ * Cria um Checkout Pro (preference) com split nativo 85/15 (RN16) para um pedido com gorjeta.
+ * Não cria pagamento direto: o cliente conclui no MP e o webhook reconcilia depois.
+ *
+ * O `paymentId` retornado é, na verdade, o `preferenceId` do MP — será substituído
+ * pelo paymentId real pela `ProcessPaymentNotificationUseCase` quando o webhook chegar.
  */
 export class CreateTipPaymentUseCase {
   constructor(
@@ -31,14 +34,15 @@ export class CreateTipPaymentUseCase {
     private readonly artistRepository: IArtistRepository,
     private readonly credentialsRepository: IPaymentCredentialsRepository,
     private readonly registry: IPaymentGatewayRegistry,
-    private readonly logger: ILogger
+    private readonly logger: ILogger,
+    private readonly frontendPublicBaseUrl: string
   ) {}
 
   async execute(input: CreateTipPaymentInput): Promise<CreateTipPaymentOutput> {
     const request = await this.requestRepository.findById(input.musicRequestId);
     if (!request) throw new NotFoundError("Pedido não encontrado.");
 
-    // Idempotência: pagamento já foi criado anteriormente
+    // Idempotência: já criamos a preference antes
     if (request.payment !== null) {
       return {
         paymentId: request.payment.paymentId,
@@ -59,6 +63,7 @@ export class CreateTipPaymentUseCase {
       throw new BusinessRuleError("Credenciais de pagamento não encontradas para o artista.");
     }
 
+    const backUrlBase = `${this.frontendPublicBaseUrl}/shows/${request.showId}`;
     const gateway = this.registry.get(artist.paymentAccount!.gateway);
     let result: CreateTipPaymentResult;
     try {
@@ -70,11 +75,16 @@ export class CreateTipPaymentUseCase {
         idempotencyKey: request.id,
         payerName: request.customerName,
         description: "Gorjeta - Toque Aquela",
+        backUrls: {
+          success: `${backUrlBase}?payment=success`,
+          failure: `${backUrlBase}?payment=failure`,
+          pending: `${backUrlBase}?payment=pending`,
+        },
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.error(
-        `Falha ao criar pagamento PIX: request=${request.id} artist=${show.artistId} amount=${request.tip.amountInCents} :: ${msg}`
+        `Falha ao criar preference de pagamento: request=${request.id} artist=${show.artistId} amount=${request.tip.amountInCents} :: ${msg}`
       );
       throw err;
     }
@@ -87,7 +97,7 @@ export class CreateTipPaymentUseCase {
     await this.requestRepository.save(request);
 
     this.logger.info(
-      `Pagamento PIX criado: request=${request.id} payment=${result.paymentId} status=${result.status}`
+      `Preference criada: request=${request.id} preference=${result.paymentId} status=${result.status}`
     );
 
     return {

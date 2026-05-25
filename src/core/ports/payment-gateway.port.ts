@@ -33,14 +33,25 @@ export interface CreateTipPaymentInput {
   amountInCents: number;
   /** Percentual destinado à plataforma (0..100). */
   platformFeePercent: number;
-  /** Identificador idempotente para este pagamento (ex.: musicRequest.id). */
+  /** Identificador idempotente — também usado como `external_reference` p/ reconciliar webhook → request. */
   idempotencyKey: string;
   /** Nome/apelido do pagador para registro no gateway (opcional). */
   payerName?: string;
   description: string;
+  /** URLs de retorno após o pagamento no checkout hospedado. */
+  backUrls?: {
+    success: string;
+    failure: string;
+    pending: string;
+  };
 }
 
 export interface CreateTipPaymentResult {
+  /**
+   * Identificador do recurso criado no gateway. Pode ser um payment-id (fluxo direto)
+   * ou um preference-id (Checkout hospedado). Armazenado em `RequestPayment.paymentId`
+   * e — no caso de preference — substituído pelo payment-id real quando o webhook chega.
+   */
   paymentId: string;
   status: TipPaymentStatus;
   /** URL de checkout (PIX QR ou redirect), quando aplicável. */
@@ -59,6 +70,12 @@ export interface FetchPaymentStatusInput {
   paymentId: string;
   /** Token OAuth do artista (opcional — alguns gateways aceitam token da plataforma). */
   artistAccessToken?: string;
+}
+
+export interface FetchPaymentStatusResult {
+  status: TipPaymentStatus;
+  /** Valor de `external_reference` retornado pelo gateway — usado p/ reconciliar webhook → request. */
+  externalReference?: string;
 }
 
 /**
@@ -85,8 +102,8 @@ export interface IPaymentGateway {
   /** Estorna um pagamento previamente aprovado (RN18). */
   refundTipPayment(input: RefundTipPaymentInput): Promise<void>;
 
-  /** Busca o status atual de um pagamento no gateway (usado para processar webhooks). */
-  fetchPaymentStatus(input: FetchPaymentStatusInput): Promise<TipPaymentStatus>;
+  /** Busca o status + external_reference de um pagamento (usado para processar webhooks). */
+  fetchPaymentStatus(input: FetchPaymentStatusInput): Promise<FetchPaymentStatusResult>;
 }
 
 /**
