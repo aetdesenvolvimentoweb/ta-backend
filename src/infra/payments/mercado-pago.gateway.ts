@@ -162,6 +162,17 @@ export class MercadoPagoGateway implements IPaymentGateway {
       ((input.amountInCents * input.platformFeePercent) / 100 / 100).toFixed(2)
     );
 
+    // statement_descriptor: nome do artista normalizado, max 13 chars (aparece na fatura do cartão).
+    const descriptor = input.artistName
+      ? input.artistName
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "") // remove acentos
+          .replace(/[^a-zA-Z0-9 ]/g, "") // só alfanumérico + espaço
+          .substring(0, 13)
+          .trim()
+          .toUpperCase()
+      : "TOQUEAQUELA";
+
     const body: Record<string, unknown> = {
       items: [
         {
@@ -174,8 +185,10 @@ export class MercadoPagoGateway implements IPaymentGateway {
       ],
       marketplace_fee: feeInReais,
       external_reference: input.idempotencyKey,
+      statement_descriptor: descriptor,
       payment_methods: {
-        // Quando pixOnly: exclui cartão/débito/boleto/ATM/saldo MP — só sobra `bank_transfer` (PIX BR).
+        // Quando pixOnly: exclui cartão/débito/boleto/ATM — sobra PIX (bank_transfer) + saldo MP.
+        // Nota: account_money NÃO pode ser excluído no modelo Connect/Marketplace do MP.
         ...(this.config.pixOnly !== false
           ? {
               excluded_payment_types: [
@@ -183,7 +196,6 @@ export class MercadoPagoGateway implements IPaymentGateway {
                 { id: "debit_card" },
                 { id: "ticket" },
                 { id: "atm" },
-                { id: "account_money" },
               ],
             }
           : {}),

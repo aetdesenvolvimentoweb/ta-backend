@@ -87,13 +87,19 @@ export const paymentCallbackController = (
       if (!query.code || !query.state) {
         throw new BusinessRuleError("Parâmetros OAuth ausentes (code/state).");
       }
-      const result = await completeConnection.execute({
-        code: query.code,
-        state: query.state,
-        redirectUri: config.redirectUri,
-      });
-      const okUrl = `${config.frontendReturnUrl}?status=connected&gateway=${result.gateway}`;
-      set.redirect = okUrl;
+      try {
+        const result = await completeConnection.execute({
+          code: query.code,
+          state: query.state,
+          redirectUri: config.redirectUri,
+        });
+        const okUrl = `${config.frontendReturnUrl}?status=connected&gateway=${result.gateway}`;
+        set.redirect = okUrl;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Erro desconhecido ao conectar conta";
+        const failUrl = `${config.frontendReturnUrl}?status=error&reason=${encodeURIComponent(message)}`;
+        set.redirect = failUrl;
+      }
     },
     {
       query: t.Object({

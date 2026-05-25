@@ -157,7 +157,6 @@ describe("MercadoPagoGateway — Checkout Pro (Entrega B)", () => {
       { id: "debit_card" },
       { id: "ticket" },
       { id: "atm" },
-      { id: "account_money" },
     ]);
     expect(capturedBody.payment_methods.installments).toBe(1);
     expect(capturedBody.back_urls.success).toBe("https://app.test/shows/s1?payment=success");

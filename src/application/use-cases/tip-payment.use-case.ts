@@ -68,6 +68,7 @@ export class CreateTipPaymentUseCase {
     let result: CreateTipPaymentResult;
     try {
       result = await gateway.createTipPayment({
+        artistName: artist.name,
         artistExternalAccountId: artist.paymentAccount!.externalAccountId,
         artistAccessToken: credentials.accessToken,
         amountInCents: request.tip.amountInCents,

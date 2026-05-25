@@ -25,6 +25,8 @@ export interface OAuthCredentials {
 }
 
 export interface CreateTipPaymentInput {
+  /** Nome do artista — usado como statement_descriptor na fatura do cartão (max 13 chars). */
+  artistName?: string;
   /** Conta externa do artista (collector) que recebe a parte líquida. */
   artistExternalAccountId: string;
   /** Token OAuth do artista (já descriptografado pelo caller). */
