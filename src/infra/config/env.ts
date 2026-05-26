@@ -19,6 +19,15 @@ if ((process.env.COOKIE_SECRET ?? "").length < 32) {
   throw new Error("COOKIE_SECRET deve ter no mínimo 32 caracteres.");
 }
 
+const PINO_LEVELS = ["fatal", "error", "warn", "info", "debug", "trace", "silent"] as const;
+type PinoLevel = (typeof PINO_LEVELS)[number];
+const rawLogLevel = (process.env.LOG_LEVEL ?? "info").toLowerCase();
+if (!(PINO_LEVELS as readonly string[]).includes(rawLogLevel)) {
+  throw new Error(
+    `LOG_LEVEL inválido: "${process.env.LOG_LEVEL}". Use um de: ${PINO_LEVELS.join(", ")}.`
+  );
+}
+
 // PAYMENT_TOKEN_KEY: 32 bytes (256 bits) em hex → 64 chars.
 const tokenKey = process.env.PAYMENT_TOKEN_KEY!;
 if (!/^[0-9a-fA-F]{64}$/.test(tokenKey)) {
@@ -43,6 +52,8 @@ export const env = {
     .filter(Boolean),
 
   PAYMENT_TOKEN_KEY: tokenKey,
+
+  LOG_LEVEL: rawLogLevel as PinoLevel,
 
   // Mercado Pago (opcional no boot — fail-fast acontece apenas se a feature for usada).
   MP_CLIENT_ID: process.env.MP_CLIENT_ID ?? "",

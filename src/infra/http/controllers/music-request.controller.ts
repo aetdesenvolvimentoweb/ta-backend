@@ -4,6 +4,7 @@ import type { GetShowRequestsUseCase } from "../../../application/use-cases/get-
 import type { MarkSongAsPlayedUseCase } from "../../../application/use-cases/mark-song-as-played.use-case";
 import type { RequestMusicUseCase } from "../../../application/use-cases/request-music.use-case";
 import type { CreateTipPaymentUseCase } from "../../../application/use-cases/tip-payment.use-case";
+import { env } from "../../config/env";
 import { authMiddleware } from "../middlewares/auth.middleware";
 
 const COOKIE_NAME = "customer_sid";
@@ -19,7 +20,7 @@ export const musicRequestController = (
   new Elysia({
     prefix: "/shows",
     cookie: {
-      secrets: process.env.COOKIE_SECRET!,
+      secrets: env.COOKIE_SECRET,
       sign: [COOKIE_NAME],
     },
   })
@@ -39,7 +40,7 @@ export const musicRequestController = (
           customer_sid.set({
             value: sid,
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
+            secure: env.NODE_ENV === "production",
             sameSite: "lax",
             maxAge: ONE_YEAR_SECONDS,
             path: "/",

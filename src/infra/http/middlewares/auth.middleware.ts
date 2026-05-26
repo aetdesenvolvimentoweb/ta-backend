@@ -1,6 +1,7 @@
 import { jwt } from "@elysiajs/jwt";
 import { Elysia } from "elysia";
 import { UnauthorizedError } from "../../../core/errors/app-error";
+import { env } from "../../config/env";
 
 /**
  * Middleware de autenticação que valida o token JWT.
@@ -10,7 +11,8 @@ export const authMiddleware = new Elysia()
   .use(
     jwt({
       name: "jwt",
-      secret: process.env.JWT_SECRET!,
+      secret: env.JWT_SECRET,
+      exp: env.JWT_EXPIRES_IN,
     })
   )
   .derive({ as: "global" }, ({ jwt, headers: { authorization } }) => ({

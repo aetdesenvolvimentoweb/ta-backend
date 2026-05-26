@@ -6,6 +6,7 @@ import type {
   GetArtistProfileUseCase,
   UpdateArtistProfileUseCase,
 } from "../../../application/use-cases/update-artist-profile.use-case";
+import { env } from "../../config/env";
 import { authMiddleware } from "../middlewares/auth.middleware";
 import {
   extractClientIp,
@@ -21,8 +22,8 @@ export const artistController = (
     .use(
       jwt({
         name: "jwt",
-        secret: process.env.JWT_SECRET!,
-        exp: process.env.JWT_EXPIRES_IN ?? "7d",
+        secret: env.JWT_SECRET,
+        exp: env.JWT_EXPIRES_IN,
       })
     )
     /**

@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 import type { ValidateAdminWhitelistUseCase } from "../../../application/use-cases/admin-whitelist.use-case";
 import { UnauthorizedError } from "../../../core/errors/app-error";
 import type { ILogger } from "../../../core/ports/logger.port";
+import { env } from "../../config/env";
 import { extractClientIp } from "./login-rate-limit";
 
 /**
@@ -21,8 +22,8 @@ export const adminMiddleware = (
     .use(
       jwt({
         name: "jwt",
-        secret: process.env.JWT_SECRET!,
-        exp: process.env.JWT_EXPIRES_IN ?? "7d",
+        secret: env.JWT_SECRET,
+        exp: env.JWT_EXPIRES_IN,
       })
     )
     .derive({ as: "scoped" }, ({ jwt, request, headers: { authorization } }) => ({

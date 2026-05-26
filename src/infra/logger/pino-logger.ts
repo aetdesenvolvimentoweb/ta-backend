@@ -1,6 +1,7 @@
 import type { Logger as PinoInstance } from "pino";
 import pino from "pino";
 import type { ILogger } from "../../core/ports/logger.port";
+import { env } from "../config/env";
 
 /**
  * Implementação do ILogger utilizando a biblioteca Pino.
@@ -11,9 +12,9 @@ export class PinoLogger implements ILogger {
 
   constructor() {
     this.logger = pino({
-      level: process.env.LOG_LEVEL || "info",
+      level: env.LOG_LEVEL,
       transport:
-        process.env.NODE_ENV !== "production"
+        env.NODE_ENV !== "production"
           ? {
               target: "pino-pretty",
               options: {

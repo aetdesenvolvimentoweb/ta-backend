@@ -1,4 +1,5 @@
 import { Elysia } from "elysia";
+import { env } from "../../config/env";
 
 /**
  * Headers de segurança alinhados com OWASP Secure Headers.
@@ -9,7 +10,7 @@ export const securityHeaders = new Elysia({ name: "security-headers" }).onAfterH
   set.headers["x-frame-options"] = "DENY";
   set.headers["referrer-policy"] = "no-referrer";
   set.headers["permissions-policy"] = "geolocation=(), microphone=(), camera=()";
-  if (process.env.NODE_ENV === "production") {
+  if (env.NODE_ENV === "production") {
     set.headers["strict-transport-security"] = "max-age=31536000; includeSubDomains";
   }
 });
