@@ -134,11 +134,11 @@ describe("MercadoPagoGateway — Checkout Pro (Entrega B)", () => {
       platformFeePercent: 15,
       idempotencyKey: "req-abc",
       payerName: "Maria",
-      description: "Gorjeta - Toque Aquela",
+      itemDescription: 'Gorjeta por "Garota de Ipanema" — Tom Jobim',
       backUrls: {
-        success: "https://app.test/shows/s1?payment=success",
-        failure: "https://app.test/shows/s1?payment=failure",
-        pending: "https://app.test/shows/s1?payment=pending",
+        success: "https://app.test/show/s1?payment=success",
+        failure: "https://app.test/show/s1?payment=failure",
+        pending: "https://app.test/show/s1?payment=pending",
       },
     });
 
@@ -149,6 +149,9 @@ describe("MercadoPagoGateway — Checkout Pro (Entrega B)", () => {
 
     expect(capturedBody.items[0].unit_price).toBe(10);
     expect(capturedBody.items[0].currency_id).toBe("BRL");
+    expect(capturedBody.items[0].description).toBe('Gorjeta por "Garota de Ipanema" — Tom Jobim');
+    expect(capturedBody.items[0].category_id).toBe("services");
+    expect(capturedBody.items[0].title).toBe("Pedido musical + gorjeta");
     expect(capturedBody.marketplace_fee).toBe(1.5);
     expect(capturedBody.external_reference).toBe("req-abc");
     // default (pixOnly omitido) → PIX-only ativo: exclui todos os outros tipos
@@ -159,8 +162,9 @@ describe("MercadoPagoGateway — Checkout Pro (Entrega B)", () => {
       { id: "atm" },
     ]);
     expect(capturedBody.payment_methods.installments).toBe(1);
-    expect(capturedBody.back_urls.success).toBe("https://app.test/shows/s1?payment=success");
-    expect(capturedBody.auto_return).toBeUndefined();
+    expect(capturedBody.back_urls.success).toBe("https://app.test/show/s1?payment=success");
+    // auto_return: "approved" → MP redireciona automaticamente após aprovação (recomendação MP p/ subir aprovação)
+    expect(capturedBody.auto_return).toBe("approved");
 
     expect((capturedHeaders as any)["X-Idempotency-Key"]).toBe("req-abc");
     expect((capturedHeaders as any)["Authorization"]).toBe("Bearer at-seller");
@@ -188,7 +192,7 @@ describe("MercadoPagoGateway — Checkout Pro (Entrega B)", () => {
       amountInCents: 2000,
       platformFeePercent: 15,
       idempotencyKey: "k",
-      description: "d",
+      itemDescription: "d",
     });
     expect(result.checkoutUrl).toBe("https://sandbox.mp/checkout");
   });
@@ -211,7 +215,7 @@ describe("MercadoPagoGateway — Checkout Pro (Entrega B)", () => {
       amountInCents: 2000,
       platformFeePercent: 15,
       idempotencyKey: "k",
-      description: "d",
+      itemDescription: "d",
     });
     expect(result.checkoutUrl).toBe("https://prod.mp/checkout");
   });
@@ -230,13 +234,13 @@ describe("MercadoPagoGateway — Checkout Pro (Entrega B)", () => {
       amountInCents: 500,
       platformFeePercent: 15,
       idempotencyKey: "k",
-      description: "d",
+      itemDescription: "d",
     });
     expect(capturedBody.payment_methods.excluded_payment_types).toBeUndefined();
     expect(capturedBody.payment_methods.installments).toBe(1);
   });
 
-  test("createTipPayment omite back_urls quando não fornecidos", async () => {
+  test("createTipPayment omite back_urls e auto_return quando back_urls não é fornecido", async () => {
     let capturedBody: any = null;
     const mockFetch = (async (_url: string, init: RequestInit) => {
       capturedBody = JSON.parse(String(init.body));
@@ -250,9 +254,10 @@ describe("MercadoPagoGateway — Checkout Pro (Entrega B)", () => {
       amountInCents: 500,
       platformFeePercent: 15,
       idempotencyKey: "k",
-      description: "d",
+      itemDescription: "d",
     });
     expect(capturedBody.back_urls).toBeUndefined();
+    expect(capturedBody.auto_return).toBeUndefined();
   });
 
   test("createTipPayment lança BusinessRuleError em resposta não-OK", async () => {
@@ -266,7 +271,7 @@ describe("MercadoPagoGateway — Checkout Pro (Entrega B)", () => {
         amountInCents: 100,
         platformFeePercent: 15,
         idempotencyKey: "k",
-        description: "d",
+        itemDescription: "d",
       })
     ).rejects.toThrow("Falha ao criar preference");
   });

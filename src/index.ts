@@ -219,6 +219,7 @@ const createTipPaymentUseCase = new CreateTipPaymentUseCase(
   requestRepository,
   showRepository,
   artistRepository,
+  songRepository,
   credentialsRepository,
   paymentRegistry,
   logger,

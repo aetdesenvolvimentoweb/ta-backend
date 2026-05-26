@@ -9,6 +9,7 @@ import type {
   TipPaymentStatus,
 } from "../../core/ports/payment-gateway.port";
 import type { IShowRepository } from "../../core/ports/show.repository";
+import type { ISongRepository } from "../../core/ports/song.repository";
 
 export interface CreateTipPaymentInput {
   musicRequestId: string;
@@ -32,6 +33,7 @@ export class CreateTipPaymentUseCase {
     private readonly requestRepository: IMusicRequestRepository,
     private readonly showRepository: IShowRepository,
     private readonly artistRepository: IArtistRepository,
+    private readonly songRepository: ISongRepository,
     private readonly credentialsRepository: IPaymentCredentialsRepository,
     private readonly registry: IPaymentGatewayRegistry,
     private readonly logger: ILogger,
@@ -63,7 +65,11 @@ export class CreateTipPaymentUseCase {
       throw new BusinessRuleError("Credenciais de pagamento não encontradas para o artista.");
     }
 
-    const backUrlBase = `${this.frontendPublicBaseUrl}/shows/${request.showId}`;
+    const song = await this.songRepository.findById(request.songId);
+    const songLabel = song ? `"${song.title}" — ${song.originalArtist}` : "pedido musical";
+    const itemDescription = `Gorjeta por ${songLabel}`;
+
+    const backUrlBase = `${this.frontendPublicBaseUrl}/show/${request.showId}`;
     const gateway = this.registry.get(artist.paymentAccount!.gateway);
     let result: CreateTipPaymentResult;
     try {
@@ -75,7 +81,7 @@ export class CreateTipPaymentUseCase {
         platformFeePercent: 15,
         idempotencyKey: request.id,
         payerName: request.customerName,
-        description: "Gorjeta - Toque Aquela",
+        itemDescription,
         backUrls: {
           success: `${backUrlBase}?payment=success`,
           failure: `${backUrlBase}?payment=failure`,

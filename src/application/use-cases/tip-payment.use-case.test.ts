@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { Artist } from "../../core/entities/artist.entity";
 import { MusicRequest } from "../../core/entities/music-request.entity";
 import { Show } from "../../core/entities/show.entity";
+import { Song } from "../../core/entities/song.entity";
 import { Email } from "../../core/value-objects/email.vo";
 import { Money } from "../../core/value-objects/money.vo";
 import { PaymentAccount } from "../../core/value-objects/payment-account.vo";
@@ -102,6 +103,21 @@ class MockCredsRepo {
   }
 }
 
+class MockSongRepo {
+  songs = new Map<string, Song>();
+  async findById(id: string) {
+    return this.songs.get(id) ?? null;
+  }
+  async findByIds() {
+    return [];
+  }
+  async findByArtistId() {
+    return [];
+  }
+  async save() {}
+  async delete() {}
+}
+
 const buildMockGateway = (overrides?: Partial<any>) => ({
   name: "mercado_pago",
   buildAuthorizeUrl: () => "",
@@ -134,6 +150,74 @@ describe("CreateTipPaymentUseCase", () => {
     const reqRepo = new MockRequestRepo();
     const showRepo = new MockShowRepo();
     const artistRepo = new MockArtistRepo();
+    const songRepo = new MockSongRepo();
+    const credsRepo = new MockCredsRepo();
+
+    const req = makeRequestWithTip();
+    reqRepo.requests.set(req.id, req);
+    showRepo.shows.set("show-1", makeShow());
+    artistRepo.artists.set("artist-1", makeArtistWithPayment());
+    songRepo.songs.set(
+      "song-1",
+      new Song("song-1", "artist-1", "Garota de Ipanema", "Tom Jobim", undefined)
+    );
+    credsRepo.creds = {
+      artistId: "artist-1",
+      gateway: "mercado_pago",
+      accessToken: "at-1",
+      refreshToken: null,
+      expiresAt: null,
+    };
+
+    let capturedInput: any = null;
+    const gw = buildMockGateway({
+      createTipPayment: async (input: any) => {
+        capturedInput = input;
+        return {
+          paymentId: "pay-1",
+          status: "pending" as const,
+          checkoutUrl: "https://pix.test/qr",
+        };
+      },
+    });
+    const useCase = new CreateTipPaymentUseCase(
+      reqRepo as any,
+      showRepo as any,
+      artistRepo as any,
+      songRepo as any,
+      credsRepo as any,
+      new MockRegistry(gw) as any,
+      mockLogger as any,
+      "http://localhost:5173"
+    );
+
+    const result = await useCase.execute({ musicRequestId: "req-1" });
+
+    expect(result.paymentId).toBe("pay-1");
+    expect(result.status).toBe("pending");
+    expect(result.checkoutUrl).toBe("https://pix.test/qr");
+
+    expect(capturedInput.itemDescription).toBe('Gorjeta por "Garota de Ipanema" — Tom Jobim');
+    expect(capturedInput.backUrls.success).toBe(
+      "http://localhost:5173/show/show-1?payment=success"
+    );
+    expect(capturedInput.backUrls.failure).toBe(
+      "http://localhost:5173/show/show-1?payment=failure"
+    );
+    expect(capturedInput.backUrls.pending).toBe(
+      "http://localhost:5173/show/show-1?payment=pending"
+    );
+
+    const saved = await reqRepo.findById("req-1");
+    expect(saved?.payment?.paymentId).toBe("pay-1");
+    expect(saved?.payment?.gateway).toBe("mercado_pago");
+  });
+
+  test("usa fallback na description quando a música foi deletada", async () => {
+    const reqRepo = new MockRequestRepo();
+    const showRepo = new MockShowRepo();
+    const artistRepo = new MockArtistRepo();
+    const songRepo = new MockSongRepo(); // sem song-1
     const credsRepo = new MockCredsRepo();
 
     const req = makeRequestWithTip();
@@ -148,26 +232,26 @@ describe("CreateTipPaymentUseCase", () => {
       expiresAt: null,
     };
 
-    const gw = buildMockGateway();
+    let capturedInput: any = null;
+    const gw = buildMockGateway({
+      createTipPayment: async (input: any) => {
+        capturedInput = input;
+        return { paymentId: "pay-1", status: "pending" as const };
+      },
+    });
     const useCase = new CreateTipPaymentUseCase(
       reqRepo as any,
       showRepo as any,
       artistRepo as any,
+      songRepo as any,
       credsRepo as any,
       new MockRegistry(gw) as any,
       mockLogger as any,
       "http://localhost:5173"
     );
 
-    const result = await useCase.execute({ musicRequestId: "req-1" });
-
-    expect(result.paymentId).toBe("pay-1");
-    expect(result.status).toBe("pending");
-    expect(result.checkoutUrl).toBe("https://pix.test/qr");
-
-    const saved = await reqRepo.findById("req-1");
-    expect(saved?.payment?.paymentId).toBe("pay-1");
-    expect(saved?.payment?.gateway).toBe("mercado_pago");
+    await useCase.execute({ musicRequestId: "req-1" });
+    expect(capturedInput.itemDescription).toBe("Gorjeta por pedido musical");
   });
 
   test("é idempotente — retorna payment existente sem chamar o gateway novamente", async () => {
@@ -191,6 +275,7 @@ describe("CreateTipPaymentUseCase", () => {
       reqRepo as any,
       showRepo as any,
       artistRepo as any,
+      new MockSongRepo() as any,
       credsRepo as any,
       new MockRegistry(gw) as any,
       mockLogger as any,
@@ -208,6 +293,7 @@ describe("CreateTipPaymentUseCase", () => {
       reqRepo as any,
       new MockShowRepo() as any,
       new MockArtistRepo() as any,
+      new MockSongRepo() as any,
       new MockCredsRepo() as any,
       new MockRegistry(buildMockGateway()) as any,
       mockLogger as any,
@@ -230,6 +316,7 @@ describe("CreateTipPaymentUseCase", () => {
       reqRepo as any,
       showRepo as any,
       artistRepo as any,
+      new MockSongRepo() as any,
       new MockCredsRepo() as any,
       new MockRegistry(buildMockGateway()) as any,
       mockLogger as any,

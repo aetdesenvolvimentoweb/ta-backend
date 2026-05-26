@@ -177,7 +177,9 @@ export class MercadoPagoGateway implements IPaymentGateway {
       items: [
         {
           id: input.idempotencyKey,
-          title: input.description,
+          title: "Pedido musical + gorjeta",
+          description: input.itemDescription,
+          category_id: "services",
           quantity: 1,
           unit_price: amountInReais,
           currency_id: "BRL",
@@ -201,7 +203,10 @@ export class MercadoPagoGateway implements IPaymentGateway {
           : {}),
         installments: 1,
       },
-      ...(input.backUrls ? { back_urls: input.backUrls } : {}),
+      // auto_return: "approved" → MP redireciona automaticamente para back_urls.success
+      // quando o pagamento é aprovado. Falha/pending continuam exigindo clique manual
+      // (comportamento padrão do MP — não há "auto_return" para esses estados).
+      ...(input.backUrls ? { back_urls: input.backUrls, auto_return: "approved" } : {}),
     };
 
     const res = await this.fetchFn(`${this.apiBaseUrl}/checkout/preferences`, {

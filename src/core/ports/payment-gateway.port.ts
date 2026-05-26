@@ -39,7 +39,12 @@ export interface CreateTipPaymentInput {
   idempotencyKey: string;
   /** Nome/apelido do pagador para registro no gateway (opcional). */
   payerName?: string;
-  description: string;
+  /**
+   * Descrição rica do item — enviada como `items[].description` ao gateway.
+   * Alimenta o motor antifraude (MP recomenda preencher para subir aprovação).
+   * Deve conter contexto semântico da transação (ex.: música, artista).
+   */
+  itemDescription: string;
   /** URLs de retorno após o pagamento no checkout hospedado. */
   backUrls?: {
     success: string;
