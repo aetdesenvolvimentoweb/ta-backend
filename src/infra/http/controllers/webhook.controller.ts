@@ -2,6 +2,9 @@ import { Elysia, t } from "elysia";
 import type { ProcessPaymentNotificationUseCase } from "../../../application/use-cases/process-payment-notification.use-case";
 import { BusinessRuleError } from "../../../core/errors/app-error";
 
+/** Defesa em profundidade contra replay: rejeitar `ts` que difere demais do agora. */
+const SIGNATURE_MAX_SKEW_MS = 5 * 60 * 1000;
+
 /**
  * Valida a assinatura HMAC-SHA256 do Mercado Pago.
  *
@@ -23,6 +26,11 @@ async function verifyMercadoPagoSignature(
 
   if (!ts || !v1) {
     throw new BusinessRuleError("Assinatura do webhook ausente ou malformada.");
+  }
+
+  const tsMs = Number(ts);
+  if (!Number.isFinite(tsMs) || Math.abs(Date.now() - tsMs) > SIGNATURE_MAX_SKEW_MS) {
+    throw new BusinessRuleError("Assinatura do webhook expirada ou com timestamp inválido.");
   }
 
   const template = `id:${paymentId};request-id:${xRequestId};ts:${ts};`;
