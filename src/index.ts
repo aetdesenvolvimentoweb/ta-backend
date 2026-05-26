@@ -89,9 +89,7 @@ async function checkDb(): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     await Promise.race([
       db.execute(sql`SELECT 1`),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("db timeout (2s)")), 2000)
-      ),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("db timeout (2s)")), 2000)),
     ]);
     return { ok: true };
   } catch (err) {
