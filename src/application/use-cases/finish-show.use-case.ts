@@ -46,18 +46,38 @@ export class FinishShowUseCase {
     await this.showRepository.save(show);
 
     // 2. Cancelar pedidos pendentes — estornar gorjetas aprovadas (RN05/RN18)
+    // Falhas individuais são logadas mas não abortam o finish: o show já foi finalizado
+    // e os demais pedidos devem ser processados. Pedidos órfãos podem ser recuperados
+    // por operação manual (futuro: endpoint admin de retry).
     const pendingRequests = await this.requestRepository.findByShowId(input.showId);
+    let refundFailures = 0;
     for (const req of pendingRequests) {
-      if (req.status === "pending") {
+      if (req.status !== "pending") continue;
+      try {
         if (req.payment?.status === "approved" && this.refundTipPaymentUseCase) {
           await this.refundTipPaymentUseCase.execute({ musicRequestId: req.id });
         } else {
           req.cancel();
           await this.requestRepository.save(req);
         }
+      } catch (err) {
+        refundFailures++;
+        this.logger.error("Falha ao processar pedido durante encerramento do show", err, {
+          event: "show.finish.request_failed",
+          showId: input.showId,
+          requestId: req.id,
+          paymentId: req.payment?.paymentId,
+          paymentStatus: req.payment?.status,
+        });
       }
     }
 
-    this.logger.info(`Show ${input.showId} finalizado pelo artista ${input.artistId}`);
+    this.logger.info(`Show ${input.showId} finalizado pelo artista ${input.artistId}`, {
+      event: "show.finish.success",
+      showId: input.showId,
+      artistId: input.artistId,
+      pendingCount: pendingRequests.length,
+      refundFailures,
+    });
   }
 }

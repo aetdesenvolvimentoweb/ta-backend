@@ -95,4 +95,57 @@ describe("FinishShow Use Case", () => {
       BusinessRuleError
     );
   });
+
+  test("deve tolerar falha de estorno em um pedido e processar os demais", async () => {
+    const showRepo = new MockShowRepo();
+    const reqRepo = new MockRequestRepo();
+
+    const show = new Show("show-1", "artist-1", new Date(), new ShowDuration(4), "active");
+    await showRepo.save(show);
+
+    const reqWithPayment = new MusicRequest(
+      "req-1",
+      "show-1",
+      "song-1",
+      "Fã 1",
+      null,
+      null,
+      new Money(1000),
+      "pending",
+      new Date(),
+      { gateway: "mercado_pago", paymentId: "mp-1", status: "approved" }
+    );
+    const reqFree = new MusicRequest("req-2", "show-1", "song-2", "Fã 2", null, null, new Money(0));
+    await reqRepo.save(reqWithPayment);
+    await reqRepo.save(reqFree);
+
+    let errorLogged = false;
+    const captureLogger = {
+      info: () => {},
+      error: () => {
+        errorLogged = true;
+      },
+      warn: () => {},
+      debug: () => {},
+    };
+
+    const failingRefund = {
+      execute: async () => {
+        throw new Error("MP indisponível");
+      },
+    };
+
+    const useCase = new FinishShowUseCase(
+      showRepo as any,
+      reqRepo as any,
+      captureLogger as any,
+      failingRefund as any
+    );
+
+    await useCase.execute({ showId: "show-1", artistId: "artist-1" });
+
+    expect(show.status).toBe("finished");
+    expect(reqFree.status).toBe("cancelled");
+    expect(errorLogged).toBe(true);
+  });
 });
