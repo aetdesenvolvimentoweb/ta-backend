@@ -1,6 +1,16 @@
 import type { Show } from "../entities/show.entity";
 
 /**
+ * Snapshot de um show histórico com métricas agregadas (apenas pedidos `played`).
+ */
+export interface ShowWithStats {
+  show: Show;
+  totalRequests: number;
+  totalPlayed: number;
+  totalTipsGrossCents: number;
+}
+
+/**
  * Interface de Repositório para a entidade Show.
  * Define como os shows são persistidos e consultados.
  */
@@ -29,4 +39,10 @@ export interface IShowRepository {
    * Atualiza o status de shows expirados (RN01).
    */
   markExpiredShows(): Promise<void>;
+
+  /**
+   * Histórico de shows encerrados/expirados de um artista, ordenados por data desc,
+   * com métricas agregadas (totais de pedidos, pedidos tocados e arrecadação bruta).
+   */
+  findHistoryByArtistId(artistId: string, limit?: number): Promise<ShowWithStats[]>;
 }

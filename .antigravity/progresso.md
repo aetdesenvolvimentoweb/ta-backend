@@ -1,7 +1,7 @@
 # Progresso do Projeto - Toque Aquela
 
-## Última Atualização: 2026-05-22
-**Status Atual**: Backend **100% completo** — arquitetura hexagonal, 23 use cases, 19 rotas, segurança OWASP, Entrega B de Pagamentos concluída, tooling de qualidade implantado (Biome + Lefthook + commitlint). Frontend também 100% completo. Projeto em fase de **hardening pré-launch** (E2E manual + observabilidade).
+## Última Atualização: 2026-05-26
+**Status Atual**: Backend e frontend **feature-complete**, validação E2E do Mercado Pago feita em produção, hardening pós-launch em andamento. Já entregue nesta janela: `GET /health`, métricas RED via Pino, pass completo de a11y no frontend, `public/_redirects` para SPA fallback, **histórico de shows encerrados** (backend + frontend), **hardening do login admin** (senha min 12, rate limit dedicado /artists/login 5/15min, logs estruturados de acesso admin). OAuth Google adiada deliberadamente (ver RN12 em `contexto_do_projeto.md`).
 
 ---
 
@@ -75,25 +75,22 @@
 
 ### Em Aberto / Próximos Passos 🚀
 
-1. **Validação ponta a ponta (manual)** — Milestone 4
-   - Subir o server com credenciais Mercado Pago de teste (`TESTUSER`).
-   - Fluxo: artista autenticar → OAuth Connect → cliente pedir música com gorjeta → escanear PIX QR → webhook MP atualizar status → artista cancelar → verificar estorno automático.
-   - Configurar `MP_WEBHOOK_SECRET` no painel do Mercado Pago (Configurações → Webhooks).
+1. **Histórico de shows — frontend (validação manual)**
+   - Smoke test em prod: criar/encerrar show, abrir `/artista/historico`, expandir cards, verificar nome da música, gorjetas e status corretos.
 
-2. **Observabilidade** — Milestone 5
-   - Health check expandido (`/health` com checagem de DB via `SELECT 1`).
-   - Métricas RED (rate, errors, duration) via Pino structured logs.
+2. **Procedimento de senhas dos admins (não-código)**
+   - Gerenciador (1Password/Bitwarden) para cada um dos ≤3 admins.
+   - Rotação anual ou após qualquer incidente.
 
-3. **Acessibilidade (a11y) — Backlog frontend**
-   - 46 warnings Biome no frontend (labels sem `htmlFor`, botões sem `type`, SVGs sem título, `autoFocus`).
-   - `useButtonType` é funcional: botões sem `type` dentro de `<form>` fazem submit inesperado — prioridade média.
-   - Demais são semântica para screen readers — prioridade baixa antes do launch.
+3. **Backlog pós-launch (sem prioridade definida)**
+   - **Planos de assinatura** (RN: reduzir comissão por tier) — requer decisão de produto antes (preço, benefícios). Escopo grande.
+   - Rate limit Redis — só faz sentido com >1 instância.
+   - Tracing distribuído — adiar até sinal real de necessidade.
 
-4. **Itens descartados / adiados para pós-MVP**
-   - Admin auth via OAuth Google (RN12): whitelist env-backed no Render é suficiente para o MVP. Substituir o repositório é trivial (arquitetura hexagonal) quando necessário.
-   - CI/CD via GitHub Actions: Render auto-deploys no push; Cloudflare Pages tem Actions próprio. Não há lacuna crítica.
-   - Rate limit Redis: necessário apenas com >1 instância.
-   - Tracing distribuído: backlog pós-launch.
+### Itens descartados deliberadamente ⛔
+- **Admin OAuth Google (RN12 original)** — adiado em 2026-05-26. Razão: blast radius do painel admin é limitado (sem acesso a fluxo de dinheiro ou tokens OAuth de artistas), e o time tende a ficar em ≤3 pessoas. Whitelist em env + senha forte + rate limit + auditoria de acesso já cobrem os vetores reais. Detalhe na RN12 em [contexto_do_projeto.md](./contexto_do_projeto.md). Reabrir se time crescer, em incidente, ou por compliance.
+- **CI/CD via GitHub Actions** — Render auto-deploys no push, Cloudflare Pages tem workflow próprio, projeto solo sem PRs externos. Lefthook + Biome + commitlint cobrem o pre-commit. Sem ganho líquido hoje.
+- **Validação E2E com Mercado Pago de teste (TESTUSER)** — após 5 dias de problemas com o sandbox, validamos em produção com credenciais reais e funcionou. Não vale repetir.
 
 ---
 

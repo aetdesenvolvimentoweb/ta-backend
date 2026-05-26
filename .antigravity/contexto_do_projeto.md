@@ -70,7 +70,7 @@ O **Toque Aquela** é uma plataforma que moderniza a interação entre o públic
 - **RN08 (Moderação):** Filtro automático de palavras ofensivas nas dedicatórias/mensagens.
 - **RN10 (Integridade de Estilos):** A alteração de um estilo pelo Admin reflete automaticamente em todas as músicas associadas.
 - **RN11 (Autenticação Artista):** Suporte a E-mail/Senha e OAuth (Google/Apple), garantindo compatibilidade com iOS e Android (PWA).
-- **RN12 (Segurança Admin):** Acesso restrito via Whitelist de e-mails + Login obrigatório via OAuth (Google) para máxima segurança.
+- **RN12 (Segurança Admin):** Acesso restrito via whitelist de e-mails em env (`ADMIN_WHITELIST`) + Login JWT email/senha com `minLength ≥ 12` + Rate limit dedicado em `/artists/login` (5 tentativas / 15 min por IP) + log estruturado (`event: 'admin.access.*'`) de toda tentativa de acesso ao painel. **OAuth Google adiada deliberadamente** (decisão 2026-05-26): com ≤3 admins e blast radius limitado do painel (sem acesso a fluxo de dinheiro nem a tokens OAuth de artistas), o ganho do OAuth sobre senha forte + whitelist é marginal. Reabrir o tema apenas se: time admin crescer (>10), houver incidente de phishing, ou requisito externo de compliance.
 - **RN13 (Acesso Público):** Modelo "Fricção Zero". Sem necessidade de login; identificação via sessão para controle de pedidos gratuitos e interação no show.
 
 ### Pagamentos (Multi-gateway, opt-in)

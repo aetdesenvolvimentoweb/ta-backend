@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { Song } from "../../../core/entities/song.entity";
 import type { ISongRepository } from "../../../core/ports/song.repository";
 import { db } from "../client";
@@ -41,6 +41,22 @@ export class DrizzleSongRepository implements ISongRepository {
       row.originalArtist,
       row.styleId || undefined,
       row.isAvailable
+    );
+  }
+
+  async findByIds(ids: string[]): Promise<Song[]> {
+    if (ids.length === 0) return [];
+    const rows = await db.select().from(songs).where(inArray(songs.id, ids));
+    return rows.map(
+      (row) =>
+        new Song(
+          row.id,
+          row.artistId,
+          row.title,
+          row.originalArtist,
+          row.styleId || undefined,
+          row.isAvailable
+        )
     );
   }
 

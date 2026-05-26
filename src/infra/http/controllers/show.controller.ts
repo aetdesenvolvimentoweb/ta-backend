@@ -1,13 +1,19 @@
 import { Elysia, t } from "elysia";
 import type { FinishShowUseCase } from "../../../application/use-cases/finish-show.use-case";
 import type { GetActiveShowUseCase } from "../../../application/use-cases/get-active-show.use-case";
+import type {
+  GetShowDetailsUseCase,
+  GetShowHistoryUseCase,
+} from "../../../application/use-cases/get-show-history.use-case";
 import type { StartShowUseCase } from "../../../application/use-cases/start-show.use-case";
 import { authMiddleware } from "../middlewares/auth.middleware";
 
 export const showController = (
   startShowUseCase: StartShowUseCase,
   finishShowUseCase: FinishShowUseCase,
-  getActiveShowUseCase: GetActiveShowUseCase
+  getActiveShowUseCase: GetActiveShowUseCase,
+  getShowHistoryUseCase: GetShowHistoryUseCase,
+  getShowDetailsUseCase: GetShowDetailsUseCase
 ) =>
   new Elysia({ prefix: "/shows" })
     .use(authMiddleware)
@@ -89,6 +95,44 @@ export const showController = (
         }),
         detail: {
           summary: "Finalizar um show manualmente",
+          tags: ["Show"],
+        },
+      }
+    )
+
+    /**
+     * Histórico de shows encerrados/expirados do artista autenticado.
+     */
+    .get(
+      "/history",
+      async ({ getArtistId }) => {
+        const artistId = await getArtistId();
+        return getShowHistoryUseCase.execute(artistId);
+      },
+      {
+        detail: {
+          summary: "Listar histórico de shows encerrados",
+          tags: ["Show"],
+        },
+      }
+    )
+
+    /**
+     * Detalhes de um show específico (com pedidos hidratados).
+     * Valida ownership no use case.
+     */
+    .get(
+      "/:showId/details",
+      async ({ params, getArtistId }) => {
+        const artistId = await getArtistId();
+        return getShowDetailsUseCase.execute({ showId: params.showId, artistId });
+      },
+      {
+        params: t.Object({
+          showId: t.String({ format: "uuid" }),
+        }),
+        detail: {
+          summary: "Obter detalhes de um show com pedidos hidratados",
           tags: ["Show"],
         },
       }

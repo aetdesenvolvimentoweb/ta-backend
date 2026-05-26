@@ -1,5 +1,6 @@
 import { cors } from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
+import { sql } from "drizzle-orm";
 import { Elysia } from "elysia";
 import {
   CreateStyleUseCase,
@@ -16,6 +17,10 @@ import { GetAppMetricsUseCase } from "./application/use-cases/get-app-metrics.us
 import { GetArtistMetricsUseCase } from "./application/use-cases/get-artist-metrics.use-case";
 // Use Cases
 import { GetPublicShowUseCase } from "./application/use-cases/get-public-show.use-case";
+import {
+  GetShowDetailsUseCase,
+  GetShowHistoryUseCase,
+} from "./application/use-cases/get-show-history.use-case";
 import { GetShowRequestsUseCase } from "./application/use-cases/get-show-requests.use-case";
 import {
   AddSongUseCase,
@@ -41,6 +46,7 @@ import {
 } from "./application/use-cases/update-artist-profile.use-case";
 import { AppError } from "./core/errors/app-error";
 import { env } from "./infra/config/env";
+import { db } from "./infra/db/client";
 import { DrizzleAdminWhitelistRepository } from "./infra/db/repositories/drizzle-admin-whitelist.repository";
 import { DrizzleArtistRepository } from "./infra/db/repositories/drizzle-artist.repository";
 import { DrizzleMusicRequestRepository } from "./infra/db/repositories/drizzle-music-request.repository";
@@ -66,6 +72,7 @@ import { showController } from "./infra/http/controllers/show.controller";
 import { webhookController } from "./infra/http/controllers/webhook.controller";
 // Middlewares
 import { rateLimit } from "./infra/http/middlewares/rate-limit.middleware";
+import { requestLogger } from "./infra/http/middlewares/request-logger.middleware";
 import { securityHeaders } from "./infra/http/middlewares/security-headers.middleware";
 import { PinoLogger } from "./infra/logger/pino-logger";
 import { MercadoPagoGateway } from "./infra/payments/mercado-pago.gateway";
@@ -74,6 +81,23 @@ import { BasicProfanityFilter } from "./infra/security/basic-profanity-filter";
 import { BunPasswordHasher } from "./infra/security/bun-password-hasher";
 import { InMemoryOAuthStateStore } from "./infra/security/oauth-state-store";
 import { AesGcmTokenCipher } from "./infra/security/token-cipher";
+
+const VERSION = "0.1.0";
+const startedAt = Date.now();
+
+async function checkDb(): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await Promise.race([
+      db.execute(sql`SELECT 1`),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("db timeout (2s)")), 2000)
+      ),
+    ]);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
 
 // 1. Infra
 const logger = new PinoLogger();
@@ -160,6 +184,13 @@ const getPublicShowUseCase = new GetPublicShowUseCase(
   artistRepository,
   songRepository,
   styleRepository,
+  logger
+);
+const getShowHistoryUseCase = new GetShowHistoryUseCase(showRepository, logger);
+const getShowDetailsUseCase = new GetShowDetailsUseCase(
+  showRepository,
+  requestRepository,
+  songRepository,
   logger
 );
 const getArtistProfileUseCase = new GetArtistProfileUseCase(artistRepository, logger);
@@ -274,7 +305,15 @@ const v1Router = new Elysia({ prefix: "/v1" })
   // Protegidas por JWT
   .guard({ detail: { security: [{ bearerAuth: [] }] } }, (app) =>
     app
-      .use(showController(startShowUseCase, finishShowUseCase, getActiveShowUseCase))
+      .use(
+        showController(
+          startShowUseCase,
+          finishShowUseCase,
+          getActiveShowUseCase,
+          getShowHistoryUseCase,
+          getShowDetailsUseCase
+        )
+      )
       .use(repertoireController(addSongUseCase, getRepertoireUseCase, toggleAvailabilityUseCase))
       .use(metricsController(getArtistMetricsUseCase))
       .use(artistProfileController(getArtistProfileUseCase, updateArtistProfileUseCase))
@@ -293,12 +332,14 @@ const v1Router = new Elysia({ prefix: "/v1" })
       validateAdminWhitelistUseCase,
       createStyleUseCase,
       mergeStylesUseCase,
-      getAppMetricsUseCase
+      getAppMetricsUseCase,
+      logger
     )
   );
 
 // 4. App
 const app = new Elysia()
+  .use(requestLogger(logger))
   .use(securityHeaders)
   .use(
     cors({
@@ -349,9 +390,33 @@ const app = new Elysia()
   .get("/", () => ({
     status: "online",
     message: "Toque Aquela API is running!",
-    version: "0.1.0",
+    version: VERSION,
     docs: "/docs",
   }))
+
+  .get("/health", async ({ set }) => {
+    const dbResult = await checkDb();
+    const uptimeMs = Date.now() - startedAt;
+
+    if (!dbResult.ok) {
+      logger.error("Health check falhou: DB indisponível", { error: dbResult.error });
+      set.status = 503;
+      return {
+        status: "degraded",
+        db: "down",
+        error: dbResult.error,
+        uptimeMs,
+        version: VERSION,
+      };
+    }
+
+    return {
+      status: "ok",
+      db: "ok",
+      uptimeMs,
+      version: VERSION,
+    };
+  })
 
   .use(v1Router)
 

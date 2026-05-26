@@ -5,16 +5,18 @@ import type {
 } from "../../../application/use-cases/admin-styles.use-case";
 import type { ValidateAdminWhitelistUseCase } from "../../../application/use-cases/admin-whitelist.use-case";
 import type { GetAppMetricsUseCase } from "../../../application/use-cases/get-app-metrics.use-case";
+import type { ILogger } from "../../../core/ports/logger.port";
 import { adminMiddleware } from "../middlewares/admin.middleware";
 
 export const adminController = (
   validateWhitelist: ValidateAdminWhitelistUseCase,
   createStyle: CreateStyleUseCase,
   mergeStyles: MergeStylesUseCase,
-  getAppMetrics: GetAppMetricsUseCase
+  getAppMetrics: GetAppMetricsUseCase,
+  logger: ILogger
 ) =>
   new Elysia({ prefix: "/admin" })
-    .use(adminMiddleware(validateWhitelist))
+    .use(adminMiddleware(validateWhitelist, logger))
 
     .get(
       "/me",

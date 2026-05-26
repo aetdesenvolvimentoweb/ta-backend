@@ -4,11 +4,16 @@ import { AuthenticateArtistUseCase } from "./application/use-cases/authenticate-
 import { CreateArtistUseCase } from "./application/use-cases/create-artist.use-case";
 import { FinishShowUseCase } from "./application/use-cases/finish-show.use-case";
 import { GetActiveShowUseCase } from "./application/use-cases/get-active-show.use-case";
+import {
+  GetShowDetailsUseCase,
+  GetShowHistoryUseCase,
+} from "./application/use-cases/get-show-history.use-case";
 import { StartShowUseCase } from "./application/use-cases/start-show.use-case";
 import { AppError } from "./core/errors/app-error";
 import { DrizzleArtistRepository } from "./infra/db/repositories/drizzle-artist.repository";
 import { DrizzleMusicRequestRepository } from "./infra/db/repositories/drizzle-music-request.repository";
 import { DrizzleShowRepository } from "./infra/db/repositories/drizzle-show.repository";
+import { DrizzleSongRepository } from "./infra/db/repositories/drizzle-song.repository";
 import { artistController } from "./infra/http/controllers/artist.controller";
 import { showController } from "./infra/http/controllers/show.controller";
 import { authMiddleware } from "./infra/http/middlewares/auth.middleware";
@@ -20,11 +25,14 @@ const hasher = new BunPasswordHasher();
 const artistRepo = new DrizzleArtistRepository();
 const showRepo = new DrizzleShowRepository();
 const requestRepo = new DrizzleMusicRequestRepository();
+const songRepo = new DrizzleSongRepository();
 const createUC = new CreateArtistUseCase(artistRepo, hasher, logger);
 const authUC = new AuthenticateArtistUseCase(artistRepo, hasher, logger);
 const startShowUC = new StartShowUseCase(showRepo, artistRepo, logger);
 const finishShowUC = new FinishShowUseCase(showRepo, requestRepo, logger);
 const getActiveShowUC = new GetActiveShowUseCase(showRepo, logger);
+const getShowHistoryUC = new GetShowHistoryUseCase(showRepo, logger);
+const getShowDetailsUC = new GetShowDetailsUseCase(showRepo, requestRepo, songRepo, logger);
 
 const app = new Elysia()
   .use(swagger({ path: "/docs" }))
@@ -46,7 +54,17 @@ const app = new Elysia()
           detail: { security: [{ bearerAuth: [] }] },
         },
         (app) =>
-          app.use(authMiddleware).use(showController(startShowUC, finishShowUC, getActiveShowUC))
+          app
+            .use(authMiddleware)
+            .use(
+              showController(
+                startShowUC,
+                finishShowUC,
+                getActiveShowUC,
+                getShowHistoryUC,
+                getShowDetailsUC
+              )
+            )
       )
   )
   .listen(3001);

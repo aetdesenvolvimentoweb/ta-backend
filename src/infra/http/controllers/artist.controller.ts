@@ -7,6 +7,11 @@ import type {
   UpdateArtistProfileUseCase,
 } from "../../../application/use-cases/update-artist-profile.use-case";
 import { authMiddleware } from "../middlewares/auth.middleware";
+import {
+  extractClientIp,
+  recordLoginAttempt,
+  resetLoginAttempts,
+} from "../middlewares/login-rate-limit";
 
 export const artistController = (
   createArtistUseCase: CreateArtistUseCase,
@@ -48,7 +53,7 @@ export const artistController = (
         body: t.Object({
           name: t.String({ minLength: 2 }),
           email: t.String({ format: "email" }),
-          password: t.String({ minLength: 8 }),
+          password: t.String({ minLength: 12 }),
           socials: t.Optional(t.Record(t.String(), t.String())),
         }),
         detail: {
@@ -63,11 +68,25 @@ export const artistController = (
      */
     .post(
       "/login",
-      async ({ body, jwt }) => {
+      async ({ body, jwt, request, set }) => {
+        const ip = extractClientIp(request.headers);
+
+        const limit = recordLoginAttempt(ip);
+        if (!limit.allowed) {
+          set.status = 429;
+          set.headers["retry-after"] = String(limit.retryAfterSeconds);
+          return {
+            code: "RATE_LIMIT_EXCEEDED",
+            message: "Muitas tentativas de login. Tente novamente em alguns minutos.",
+          };
+        }
+
         const artist = await authenticateArtistUseCase.execute({
           email: body.email,
           passwordInPlainText: body.password,
         });
+
+        resetLoginAttempts(ip);
 
         const token = await jwt.sign({
           sub: artist.id,
