@@ -1,4 +1,4 @@
-import { UnauthorizedError } from "../../core/errors/app-error";
+import { ForbiddenError } from "../../core/errors/app-error";
 import type { ILogger } from "../../core/ports/logger.port";
 
 /**
@@ -30,7 +30,7 @@ export class ValidateAdminWhitelistUseCase {
 
     if (!isAllowed) {
       this.logger.warn(`Tentativa de acesso administrativo negada: ${email}`);
-      throw new UnauthorizedError(
+      throw new ForbiddenError(
         "Acesso negado. Este e-mail não está na lista de administradores autorizados."
       );
     }

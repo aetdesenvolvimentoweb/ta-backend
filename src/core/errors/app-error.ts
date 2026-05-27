@@ -31,8 +31,23 @@ export class NotFoundError extends AppError {
 
 /**
  * Erro para falhas de autenticação (HTTP 401).
+ *
+ * Use apenas quando o token está ausente, inválido ou expirado — situações em
+ * que o cliente precisa reautenticar. Para usuário autenticado mas sem permissão
+ * (admin/owner), prefira `ForbiddenError`.
  */
 export class UnauthorizedError extends AppError {
   public readonly code = "UNAUTHORIZED";
   public readonly statusCode = 401;
+}
+
+/**
+ * Erro para falta de permissão de usuário autenticado (HTTP 403).
+ *
+ * Diferencia "não autenticado" de "autenticado mas sem permissão" para que o
+ * frontend não trate negação de acesso como sessão expirada (e vice-versa).
+ */
+export class ForbiddenError extends AppError {
+  public readonly code = "FORBIDDEN";
+  public readonly statusCode = 403;
 }

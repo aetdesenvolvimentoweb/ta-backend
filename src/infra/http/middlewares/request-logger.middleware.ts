@@ -1,4 +1,5 @@
 import { Elysia } from "elysia";
+import { AppError } from "../../../core/errors/app-error";
 import type { ILogger } from "../../../core/ports/logger.port";
 
 const SKIP_EXACT = new Set(["/", "/health"]);
@@ -31,7 +32,17 @@ export function requestLogger(logger: ILogger) {
 
     const start = startTimes.get(request);
     const durationMs = start != null ? Date.now() - start : -1;
-    const status = typeof set.status === "number" ? set.status : err != null ? 500 : 200;
+    // O onError global do request-logger roda ANTES do onError do v1Router setar
+    // set.status — então, para AppError, lemos o status diretamente do erro.
+    // Sem isso, erros de negócio (401/403/404) aparecem como 500 e poluem as métricas RED.
+    const status =
+      typeof set.status === "number"
+        ? set.status
+        : err instanceof AppError
+          ? err.statusCode
+          : err != null
+            ? 500
+            : 200;
 
     const context = {
       event: "http.request",
