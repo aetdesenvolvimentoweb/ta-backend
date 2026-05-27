@@ -2,6 +2,8 @@ import { jwt } from "@elysiajs/jwt";
 import { Elysia, t } from "elysia";
 import type { AuthenticateArtistUseCase } from "../../../application/use-cases/authenticate-artist.use-case";
 import type { CreateArtistUseCase } from "../../../application/use-cases/create-artist.use-case";
+import type { RequestPasswordResetUseCase } from "../../../application/use-cases/request-password-reset.use-case";
+import type { ResetPasswordUseCase } from "../../../application/use-cases/reset-password.use-case";
 import type {
   GetArtistProfileUseCase,
   UpdateArtistProfileUseCase,
@@ -16,7 +18,9 @@ import {
 
 export const artistController = (
   createArtistUseCase: CreateArtistUseCase,
-  authenticateArtistUseCase: AuthenticateArtistUseCase
+  authenticateArtistUseCase: AuthenticateArtistUseCase,
+  requestPasswordResetUseCase: RequestPasswordResetUseCase,
+  resetPasswordUseCase: ResetPasswordUseCase
 ) =>
   new Elysia({ prefix: "/artists" })
     .use(
@@ -111,6 +115,53 @@ export const artistController = (
         }),
         detail: {
           summary: "Autenticar um artista",
+          tags: ["Artist"],
+        },
+      }
+    )
+
+    /**
+     * Solicita o envio de e-mail de redefinição de senha.
+     * Sempre retorna 204 para não vazar quais e-mails existem na base.
+     */
+    .post(
+      "/password-reset/request",
+      async ({ body, set }) => {
+        await requestPasswordResetUseCase.execute({ email: body.email });
+        set.status = 204;
+        return null;
+      },
+      {
+        body: t.Object({
+          email: t.String({ format: "email" }),
+        }),
+        detail: {
+          summary: "Solicitar redefinição de senha (envio de e-mail)",
+          tags: ["Artist"],
+        },
+      }
+    )
+
+    /**
+     * Confirma redefinição de senha usando o token enviado por e-mail.
+     */
+    .post(
+      "/password-reset/confirm",
+      async ({ body, set }) => {
+        await resetPasswordUseCase.execute({
+          token: body.token,
+          newPassword: body.newPassword,
+        });
+        set.status = 204;
+        return null;
+      },
+      {
+        body: t.Object({
+          token: t.String({ minLength: 32 }),
+          newPassword: t.String({ minLength: 12 }),
+        }),
+        detail: {
+          summary: "Confirmar redefinição de senha",
           tags: ["Artist"],
         },
       }

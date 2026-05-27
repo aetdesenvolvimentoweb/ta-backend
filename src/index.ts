@@ -35,6 +35,8 @@ import {
 } from "./application/use-cases/payment-connection.use-case";
 import { ProcessPaymentNotificationUseCase } from "./application/use-cases/process-payment-notification.use-case";
 import { RequestMusicUseCase } from "./application/use-cases/request-music.use-case";
+import { RequestPasswordResetUseCase } from "./application/use-cases/request-password-reset.use-case";
+import { ResetPasswordUseCase } from "./application/use-cases/reset-password.use-case";
 import { StartShowUseCase } from "./application/use-cases/start-show.use-case";
 import {
   CreateTipPaymentUseCase,
@@ -50,10 +52,12 @@ import { db } from "./infra/db/client";
 import { DrizzleAdminWhitelistRepository } from "./infra/db/repositories/drizzle-admin-whitelist.repository";
 import { DrizzleArtistRepository } from "./infra/db/repositories/drizzle-artist.repository";
 import { DrizzleMusicRequestRepository } from "./infra/db/repositories/drizzle-music-request.repository";
+import { DrizzlePasswordResetTokenRepository } from "./infra/db/repositories/drizzle-password-reset-token.repository";
 import { DrizzlePaymentCredentialsRepository } from "./infra/db/repositories/drizzle-payment-credentials.repository";
 import { DrizzleShowRepository } from "./infra/db/repositories/drizzle-show.repository";
 import { DrizzleSongRepository } from "./infra/db/repositories/drizzle-song.repository";
 import { DrizzleStyleRepository } from "./infra/db/repositories/drizzle-style.repository";
+import { ResendEmailService } from "./infra/email/resend-email.service";
 import { adminController } from "./infra/http/controllers/admin.controller";
 // Controllers
 import {
@@ -109,8 +113,20 @@ const styleRepository = new DrizzleStyleRepository();
 const whitelistRepository = new DrizzleAdminWhitelistRepository(env.ADMIN_WHITELIST);
 const tokenCipher = new AesGcmTokenCipher(env.PAYMENT_TOKEN_KEY);
 const credentialsRepository = new DrizzlePaymentCredentialsRepository(tokenCipher);
+const passwordResetTokenRepository = new DrizzlePasswordResetTokenRepository();
 const oauthStateStore = new InMemoryOAuthStateStore();
 oauthStateStore.startSweeper();
+
+// E-mail transacional: instanciado apenas se RESEND_API_KEY estiver presente.
+// Em dev/staging sem chave, o use case loga o link em vez de enviar.
+const emailService = env.RESEND_API_KEY
+  ? new ResendEmailService(env.RESEND_API_KEY, env.EMAIL_FROM, logger)
+  : null;
+if (!emailService) {
+  logger.warn(
+    "RESEND_API_KEY não configurada — e-mails de redefinição de senha serão apenas logados."
+  );
+}
 
 // Payment gateway registry — adicionar Stripe/Pagar.me aqui no futuro (RN14).
 const paymentRegistry = new PaymentGatewayRegistry();
@@ -136,6 +152,20 @@ const authenticateArtistUseCase = new AuthenticateArtistUseCase(
   passwordHasher,
   logger
 );
+const requestPasswordResetUseCase = new RequestPasswordResetUseCase({
+  artistRepository,
+  tokenRepository: passwordResetTokenRepository,
+  emailService,
+  logger,
+  frontendBaseUrl: env.FRONTEND_PUBLIC_BASE_URL,
+  tokenTtlMin: env.PASSWORD_RESET_TOKEN_TTL_MIN,
+});
+const resetPasswordUseCase = new ResetPasswordUseCase({
+  artistRepository,
+  tokenRepository: passwordResetTokenRepository,
+  passwordHasher,
+  logger,
+});
 const startShowUseCase = new StartShowUseCase(showRepository, artistRepository, logger);
 const getActiveShowUseCase = new GetActiveShowUseCase(showRepository, logger);
 const addSongUseCase = new AddSongUseCase(songRepository, styleRepository, logger);
@@ -285,7 +315,14 @@ const v1Router = new Elysia({ prefix: "/v1" })
     return { code: "INTERNAL_SERVER_ERROR", message: "Ocorreu um erro interno inesperado." };
   })
   // Públicas
-  .use(artistController(createArtistUseCase, authenticateArtistUseCase))
+  .use(
+    artistController(
+      createArtistUseCase,
+      authenticateArtistUseCase,
+      requestPasswordResetUseCase,
+      resetPasswordUseCase
+    )
+  )
   .use(publicShowController(getPublicShowUseCase))
   .get("/styles", async () => listStylesUseCase.execute(), {
     detail: { summary: "Listar estilos musicais disponíveis", tags: ["Repertoire"] },

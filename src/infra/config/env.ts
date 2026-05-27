@@ -79,4 +79,12 @@ export const env = {
    */
   MP_USE_SANDBOX_CHECKOUT:
     (process.env.MP_USE_SANDBOX_CHECKOUT ?? "false").toLowerCase() === "true",
+
+  // E-mail transacional (Resend). Vazio em dev/test desabilita envio real — o
+  // adapter ResendEmailService nem é instanciado se RESEND_API_KEY estiver vazio.
+  RESEND_API_KEY: process.env.RESEND_API_KEY ?? "",
+  /** Remetente (deve estar verificado no painel do Resend). Ex: "Toque Aquela <no-reply@toqueaquela.app>". */
+  EMAIL_FROM: process.env.EMAIL_FROM ?? "Toque Aquela <onboarding@resend.dev>",
+  /** TTL do token de redefinição de senha em minutos. */
+  PASSWORD_RESET_TOKEN_TTL_MIN: Number(process.env.PASSWORD_RESET_TOKEN_TTL_MIN ?? 30),
 } as const;

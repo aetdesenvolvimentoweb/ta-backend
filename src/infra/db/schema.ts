@@ -42,6 +42,28 @@ export const artists = pgTable("artists", {
 });
 
 /**
+ * Tabela de tokens de redefinição de senha.
+ *
+ * Apenas o hash SHA-256 do token é persistido — o token em si vai por e-mail
+ * e nunca trafega em log/DB. `usedAt` é setado no consumo (single-use) e o
+ * cron de limpeza pode remover registros com `expiresAt < now() - 7d`.
+ */
+export const passwordResetTokens = pgTable(
+  "password_reset_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    artistId: uuid("artist_id")
+      .references(() => artists.id)
+      .notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("idx_password_reset_artist_id").on(t.artistId)]
+);
+
+/**
  * Tabela de Shows
  */
 export const shows = pgTable(
