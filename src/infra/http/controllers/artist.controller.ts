@@ -31,18 +31,16 @@ export const artistController = (
       })
     )
     /**
-     * Cadastro de novo artista
+     * Cadastro de novo artista.
+     *
+     * Não retorna JWT: o usuário deve passar pela tela de login após criar a conta.
+     * Isso evita que cadastros feitos em dispositivos compartilhados deixem sessão ativa.
      */
     .post(
       "/",
-      async ({ body, jwt }) => {
+      async ({ body, set }) => {
         const artist = await createArtistUseCase.execute(body);
-
-        const token = await jwt.sign({
-          sub: artist.id,
-          email: artist.email.getValue(),
-        });
-
+        set.status = 201;
         return {
           artist: {
             id: artist.id,
@@ -51,7 +49,6 @@ export const artistController = (
             socials: artist.socials,
             isPremium: artist.isPremium,
           },
-          token,
         };
       },
       {
